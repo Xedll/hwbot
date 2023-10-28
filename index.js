@@ -1,128 +1,216 @@
 const TelegramBot = require('node-telegram-bot-api')
 require('dotenv').config()
 
+// const axios = require('axios').default;
+// axios.post('https://kai.ru/raspisanie?p_p_id=pubStudentSchedule_WAR_publicStudentSchedule10&p_p_lifecycle=2&p_p_resource_id=schedule', { groupId: '25212' },
+//    { headers: { 'content-type': 'application/x-www-form-urlencoded' } }
+// )
+
+const buildHomeworkMessage = require('./commands/buildHomeworkMessage.js')
+const getListOfLessons = require('./commands/getListOfLessons.js')
+const parseLessonsForOptions = require('./commands/parseLessonsForOptions.js')
+
 
 const BOT_TOKEN = process.env.api_key_bot
 const ADMIN_PASSWORD = process.send.admin_password
+
 
 const bot = new TelegramBot(BOT_TOKEN, {
    polling: true
 });
 
+
 bot.on('polling_error', (err) => {
    console.log(err.message)
 })
 
+
 const homework = {}
 const chats = {}
+const lessons = [
+   'Информатика и основы информационных технологий',
+   'Введение в профессиональную деятельность ',
+   'Основы программирования',
+   'Линейная алгебра и аналитическая геометрия',
+   'Философия',
+   'Физическая культура и спорт (элективная)',
+   'Физика',
+   'История России',
+   'Математический анализ',
+   'Основы российской государственности',
+   'Иностранный язык',
+   'Физическая культура и спорт'
+]
+const menus = {
+   basic: [
+      ['Профиль'], ['Посмотреть дз'], ['Разное']
+   ],
+   'разное': {
+      basic: [['Выбрать группу по Английскому Языку'], ['Назад']],
+      admin: [['Выбрать группу по Английскому Языку'], ['Добавить домашнее задание'], ['Назад']]
+   }
+
+}
+
+
 let isWaitingForUserAnsw = { "target": null, "isWaiting": false }
+
+let tempTask = {}
 
 class Task {
    constructor(text, lesson, deadline) {
       this.text = text,
          this.creationDate = Date.now(),
          this.lesson = lesson,
-         this.deadline = deadline //Сам ставится взависимости от расписания
-   }
-   getData() {
-      return [this.text, this.lesson, this.creationDate, this.deadline]
+         this.deadline = deadline || 0 //Сам ставится взависимости от расписания
    }
 }
 
-bot.onText(/\/add "(.*)"\s+([^\s]+)\s+(\d{4}.\d{2}.\d{2})/, async (message, match) => {
-   if (homework[match[2].toLowerCase()]) {
-      homework[match[2].toLowerCase()].push(new Task(match[1], match[2], '2023.12.10'))
-   } else {
-      homework[match[2].toLowerCase()] = [new Task(match[1], match[2], '2023.12.10')]
-   }
-   bot.sendMessage(message.chat.id, 'Added!')
-})
-
-// bot.onText(/Посмотреть всё дз/, async (message) => {
-//    for (let lesson of Object.keys(homework)) {
-//       await bot.sendMessage(message.chat.id, `Домашка по ${lesson}`)
-//       for (let task of homework[lesson]) {
-//          let data = task.getData()
-//          await bot.sendMessage(message.chat.id, `${data[0]}.\nДо: ${data[3]}`)
-//       }
-//    }
-// })
-
-// bot.onText(/Дз (.+)/, async (message, match) => {
-//    console.log(homework[match[1]])
-//    if (homework[match[1]]) {
-//       await bot.sendMessage(message.chat.id, `Домашка по ${match[1]}`)
-//       for (let task of homework[match[1]]) {
-//          let data = task.getData()
-//          await bot.sendMessage(message.chat.id, `${data[0]}.\nДо: ${data[3]}`)
-//       }
-//    } else {
-//       bot.sendMessage(message.chat.id, `Домашки по ${match[1]} нету`)
-//    }
-// })
-
 bot.onText(/\/start/, async (message) => {
-   await bot.sendMessage(message.chat.id, 'Для начала введи в какой группе по английскому ты находишься (только цифра: 1 - начальная / 2 - средняя / 3 - сильная):')
-   isWaitingForUserAnsw = { target: 'english', isWaiting: true }
+   if (!(message.chat.id in chats)) {
+      chats[message.chat.id] = { permission: 'basic' }
+      await bot.sendMessage(message.chat.id, 'Сюда в общем то что может бот делать напиши', {
+         reply_markup: {
+            keyboard: menus.basic
+         }
+      })
+   } else {
+      await bot.sendMessage(message.chat.id, 'Что делаем?', {
+         reply_markup: {
+            keyboard: menus.basic
+         }
+      })
+   }
 })
 
-
-bot.on('message', async (message) => {
-   if (isWaitingForUserAnsw.isWaiting && isWaitingForUserAnsw.target == 'english') {
-      if (+message.text <= 3 && +message.text >= 1) {
-         chats[message.chat.id] = { 'english': message.text }
-         bot.sendMessage(message.chat.id, "Отлично! Приятного пользования ботом.", {
-            "reply_markup": {
-               'keyboard': [['Профиль'], ['Посмотреть дз'], ['Разное']]
-            }
-         })
-         isWaitingForUserAnsw = { "target": null, "isWaiting": false }
-      } else {
-         bot.sendMessage(message.chat.id, "Такой группы не существует! Введите существующий номер (1 - начальная / 2 - средняя / 3 - сильная):")
+bot.onText(/Разное/, async (message) => {
+   bot.sendMessage(message.chat.id, 'Что делаем?', {
+      reply_markup: {
+         keyboard: menus['разное'].admin,
       }
-   }
+
+   })
 })
 
 bot.onText(/Посмотреть дз/, async (message) => {
    bot.sendMessage(message.chat.id, "По чему смотрим дз?", {
       reply_markup: JSON.stringify({
-         'inline_keyboard': [[{ text: 'Посмотреть всё дз', callback_data: JSON.stringify({ target: 'homework', lesson: 'Всё' }) }], [{ text: 'Инфа', callback_data: JSON.stringify({ target: 'homework', lesson: 'Инфа' }) },
-         { text: 'Проф. деят.', callback_data: JSON.stringify({ target: 'homework', lesson: 'Проф. Деят.' }) }, { text: 'Оп', callback_data: JSON.stringify({ target: 'homework', lesson: 'Оп' }) }],
-         [{ text: 'Линейка', callback_data: JSON.stringify({ target: 'homework', lesson: 'Линейка' }) }, { text: 'Философия', callback_data: JSON.stringify({ target: 'homework', lesson: 'Философия' }) }, { text: 'Физра', callback_data: JSON.stringify({ target: 'homework', lesson: 'Физра' }) }],
-         [{ text: 'Физика', callback_data: JSON.stringify({ target: 'homework', lesson: 'Физика' }) }, { text: 'История', callback_data: JSON.stringify({ target: 'homework', lesson: 'История' }) }, { text: 'Матан', callback_data: JSON.stringify({ target: 'homework', lesson: 'Матан' }) }],
-         [{ text: 'Орг', callback_data: JSON.stringify({ target: 'homework', lesson: 'Орг' }) }, { text: 'Англ', callback_data: JSON.stringify({ target: 'homework', lesson: 'Англ' }) }]]
+         inline_keyboard: [[{ text: 'Дз по всем дисциплинам', callback_data: JSON.stringify({ target: 'homework', lesson: 'Всё' }) }], ...parseLessonsForOptions(lessons, 2, 'homework')]
+      })
+   })
+})
+bot.onText(/Выбрать группу по Английскому Языку/, async (message) => {
+   await bot.sendMessage(message.chat.id, 'Для начала введи в какой группе по английскому ты находишься (1 - начальная / 2 - средняя / 3 - сильная):', {
+      reply_markup: JSON.stringify({
+         'inline_keyboard': [[{ text: '1-я', callback_data: JSON.stringify({ target: 'english', group: '1', chatID: message.chat.id }) }],
+         [{ text: '2-я', callback_data: JSON.stringify({ target: 'english', group: '2', chatID: message.chat.id }) }],
+         [{ text: '3-я', callback_data: JSON.stringify({ target: 'english', group: '3', chatID: message.chat.id }) }]
+         ]
       })
    })
 })
 
+bot.onText(/Назад/, async (message) => {
+   await bot.sendMessage(message.chat.id, 'Что делаем?', {
+      reply_markup: {
+         keyboard: menus.basic
+      }
+   })
+   isWaitingForUserAnsw = { "target": null, "isWaiting": false }
+})
+
+bot.onText(/Добавить домашнее задание/, async (message) => {
+   await bot.sendMessage(message.chat.id, 'По какому предмету добавляем дз?', {
+      reply_markup: JSON.stringify({
+         inline_keyboard: parseLessonsForOptions(lessons, 1, "add")
+      })
+   })
+   isWaitingForUserAnsw = { target: 'addHomeworkText', isWaiting: true }
+})
+
+bot.on('message', async (message) => {
+   if (!isWaitingForUserAnsw.isWaiting) return
+
+   if (isWaitingForUserAnsw.target == 'addHomeworkText') {
+      tempTask.text = message.text
+      await bot.sendMessage(message.chat.id, 'Добавим дедлайн?', {
+         reply_markup: JSON.stringify({
+            inline_keyboard: [[{ text: 'Да', callback_data: JSON.stringify({ target: 'addDeadline', data: 'yes' }) }, { text: 'Нет', callback_data: JSON.stringify({ target: 'addDeadline', data: 'no' }) }]]
+         })
+      })
+   }
+   if (isWaitingForUserAnsw.target == 'addDeadline') {
+      tempTask.deadline = message.text
+      if (homework[tempTask.lesson]) {
+         homework[tempTask.lesson].push(new Task(tempTask.text, tempTask.lesson, tempTask.deadline))
+      } else {
+         homework[tempTask.lesson] = [new Task(tempTask.text, tempTask.lesson, tempTask.deadline)]
+      }
+      await bot.sendMessage(message.chat.id, 'Домашка добавлена!', {
+         reply_markup: {
+            keyboard: menus.basic
+         }
+      })
+      isWaitingForUserAnsw = { "target": null, "isWaiting": false }
+      tempTask = {}
+   }
+})
 
 bot.on('callback_query', async (message) => {
    let data = JSON.parse(message.data)
-   if (data.target != 'homework') return
-   if (data.lesson == 'Всё') {
-      if (Object.keys(homework).length > 0) {
-         for (let lesson of Object.keys(homework)) {
-            await bot.sendMessage(message.message.chat.id, `Домашка по ${lesson}`)
-            for (let task of homework[lesson]) {
-               let info = task.getData()
-               await bot.sendMessage(message.message.chat.id, `${info[0]}.\nДо: ${info[3]}`)
-               bot.answerCallbackQuery(message.id)
+   let chatID = message.message.chat.id
+   if (data.target == 'homework') {
+      if (data.lesson == 'Всё') {
+         if (Object.keys(homework).length > 0) {
+            for (let lesson of Object.keys(homework)) {
+               await bot.sendMessage(chatID, buildHomeworkMessage(homework[lesson], lesson))
             }
+         } else {
+            await bot.sendMessage(chatID, `Дз нету!`)
          }
+         bot.answerCallbackQuery(message.id)
       } else {
-         await bot.sendMessage(message.message.chat.id, `Дз нету!`)
+         if (homework[lessons[data.lesson]]) {
+            await bot.sendMessage(chatID, buildHomeworkMessage(homework[lessons[data.lesson]], lessons[data.lesson]))
+         } else {
+            await bot.sendMessage(chatID, `Дз по дисциплине "${lessons[data.lesson]}" нет`)
+         }
          bot.answerCallbackQuery(message.id)
       }
-   } else {
-      if (homework[(data.lesson).toLowerCase()]) {
-         await bot.sendMessage(message.message.chat.id, `Домашка по ${data.lesson}`)
-         for (let task of homework[(data.lesson).toLowerCase()]) {
-            let info = task.getData()
-            await bot.sendMessage(message.message.chat.id, `${info[0]}.\nДо: ${info[3]}`)
-            bot.answerCallbackQuery(message.id)
+   }
+   if (data.target == 'english') {
+      chats[data.chatID] = { english: data.group, permission: 'basic' }
+      await bot.sendMessage(data.chatID, "Отлично! Приятного пользования ботом.", {
+         "reply_markup": {
+            'keyboard': [['Профиль'], ['Посмотреть дз'], ['Разное']]
          }
+      })
+      bot.answerCallbackQuery(message.id)
+   }
+   if (data.target == 'add') {
+      let lessonID = data.lesson
+      tempTask.lesson = lessons[lessonID]
+      await bot.sendMessage(chatID, `Что задали по ${lessons[lessonID]}?`)
+      bot.answerCallbackQuery(message.id)
+   }
+   if (data.target == 'addDeadline') {
+      if (data.data == 'yes') {
+         isWaitingForUserAnsw = { "target": 'addDeadline', "isWaiting": true }
+         await bot.sendMessage(chatID, 'Какой дедлайн у домашки?')
+         bot.answerCallbackQuery(message.id)
       } else {
-         await bot.sendMessage(message.message.chat.id, `Домашки по ${data.lesson} нету`)
+         if (homework[tempTask.lesson]) {
+            homework[tempTask.lesson].push(new Task(tempTask.text, tempTask.lesson, tempTask.deadline))
+         } else {
+            homework[tempTask.lesson] = [new Task(tempTask.text, tempTask.lesson, tempTask.deadline)]
+         }
+         await bot.sendMessage(chatID, 'Домашка добавлена!', {
+            reply_markup: {
+               keyboard: menus.basic
+            }
+         })
+         isWaitingForUserAnsw = { "target": null, "isWaiting": false }
+         tempTask = {}
          bot.answerCallbackQuery(message.id)
       }
    }
