@@ -1,23 +1,35 @@
-function parseLessonsForOptions(lessons, numberOfButtons, target) {
+function parseLessonsForOptions(lessons, numberOfButtons, target, arr = []) {
    let lessonsForButton = [[]];
-
-   let numberOfLessons = lessons.length;
    let lastButton = false
 
-   for (let i = 0, j = 0; i < numberOfLessons; i++) {
+
+   let temp = []
+   if (arr.length > 0) {
+      lessons.forEach((element, index) => {
+         if (arr.includes(element)) {
+            temp.push({ text: lessons[index], callback_data: JSON.stringify({ target: target, lesson: index }) })
+         }
+      });
+   } else {
+      lessons.map((item, index) => {
+         temp.push({ text: item, callback_data: JSON.stringify({ target: target, lesson: index }) })
+      })
+   }
+
+   for (let i = 0, j = 0; i < temp.length; i++) {
+
       if ((i + 1) % numberOfButtons != 0) {
-         lessonsForButton[j].push({ text: lessons[i], callback_data: JSON.stringify({ target: target, lesson: i }) })
+         lessonsForButton[j].push({ text: temp[i].text, callback_data: temp[i].callback_data })
       }
       else {
-         lessonsForButton[j].push({ text: lessons[i], callback_data: JSON.stringify({ target: target, lesson: i }) })
+         lessonsForButton[j].push({ text: temp[i].text, callback_data: temp[i].callback_data })
          j++;
-         lastButton = (i == numberOfLessons - 1);
+         lastButton = (i == temp.length - 1);
          if (lastButton != true) {
             lessonsForButton.push([]);
          }
       }
    }
-
    return lessonsForButton;
 }
 

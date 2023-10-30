@@ -5,7 +5,7 @@ function getListOfLessons(schedule) {
    for (let i = 1; i <= numberOfDays; i++) {
       let numberOfLessons = schedule.data[i].length;
       for (let j = 0; j < numberOfLessons; j++) {
-         let lessonName = schedule.data[i][j].disciplName
+         let lessonName = schedule.data[i][j].disciplName.match(/(\S+)/g).join(' ');
          if (lessons.includes(lessonName) == false || lessonName == 'Физическая культура и спорт (элективная)') {
             lessons.push(lessonName);
          }
