@@ -5,7 +5,9 @@ require('dotenv').config()
 // const axios = require('axios').default;
 // axios.post('https://kai.ru/raspisanie?p_p_id=pubStudentSchedule_WAR_publicStudentSchedule10&p_p_lifecycle=2&p_p_resource_id=schedule', { groupId: '25212' },
 //    { headers: { 'content-type': 'application/x-www-form-urlencoded' } }
-// )
+// ).then(data => {
+//    console.log(parseLessonsForDays(data))
+// })
 
 
 //Functions
@@ -15,7 +17,8 @@ const { parse } = require('dotenv')
 
 //Options
 const menus = require('./options/menu.js')
-const lessons = require('./options/lessons.js')
+const lessons = require('./options/lessons.js');
+const parseLessonsForDays = require('./commands/parseLessonsForDays.js');
 const homework = {}
 const chats = {}
 const admins = {
