@@ -3,14 +3,6 @@ function parseLessonsForDays(schedule) {
 
    let numberOfDays = Object.keys(schedule).length;
 
-   let arr = ['amt', 'nal', 'nou'];
-
-   let dayNumberInSchedule = "";
-
-   let lessonName;
-
-   let weekNumber;
-
    let firstKeyWordForWeek = "чет";
    let secondKeyWordForWeek = "неч";
 
@@ -22,24 +14,36 @@ function parseLessonsForDays(schedule) {
    }
 
    for (let i = 1; i <= numberOfDays; i++) {
-      numberOfLessons = schedule.data[i].length;
+      let numberOfLessons = schedule.data[i].length;
 
       for (let j = 0; j < numberOfLessons; j++) {
-         lessonName = schedule.data[i][j].disciplName;
+         let lessonInformation = createLessonInformation();
+         lessonInformation.name = removeExtraSpaces(schedule.data[i][j].disciplName);
+         lessonInformation.type = removeExtraSpaces(schedule.data[i][j].disciplType);
 
-         keyWordInSchedule = schedule.data[i][j].dayDate.trim().toLowerCase();
+         let keyWordInSchedule = schedule.data[i][j].dayDate.trim().toLowerCase();
 
          if (Object.keys(splitLessons).includes(keyWordInSchedule)) {
-            splitLessons[keyWordInSchedule][i].push(lessonName);
+            splitLessons[keyWordInSchedule][i].push(lessonInformation);
          }
          else {
-            splitLessons[firstKeyWordForWeek][i].push(lessonName);
-            splitLessons[secondKeyWordForWeek][i].push(lessonName);
+            splitLessons[firstKeyWordForWeek][i].push(lessonInformation);
+            splitLessons[secondKeyWordForWeek][i].push(lessonInformation);
          }
       }
    }
 
    return splitLessons;
+}
+
+function createLessonInformation() {
+   return { name: '', type: '' };
+}
+
+function removeExtraSpaces(line) {
+   if (line != null)
+      return line.match(/(\S+)/g).join(" ");
+   return line
 }
 
 module.exports = parseLessonsForDays
