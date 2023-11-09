@@ -35,12 +35,13 @@ const resetUserInput = () => {
 }
 
 class Task {
-   constructor(text, lesson, deadline, creator) {
+   constructor(text, lesson, deadline, creator, type) {
       this.text = text;
       this.lesson = lesson;
       this.deadline = deadline || 0; //Сам ставится взависимости от расписания
       this.creator = creator;
       this.creationDate = Date.now();
+      this.type = type;
    }
 }
 
@@ -114,7 +115,7 @@ bot.onText(/Посмотреть дз/, async (message) => {
    if (!(message.chat.id in chats)) return
    await bot.sendMessage(message.chat.id, "По чему смотрим дз?", {
       reply_markup: JSON.stringify({
-         inline_keyboard: [[{ text: 'Дз по всем дисциплинам', callback_data: JSON.stringify({ target: 'homework', lesson: 'Всё' }) }], ...parseLessonsForOptions(lessons, 2, 'homework')]
+         inline_keyboard: [[{ text: 'Дз по всем дисциплинам', callback_data: JSON.stringify({ target: 'homework', lesson: 'Всё' }) }], ...parseLessonsForOptions(Object.keys(lessons), 2, 'homework')]
       })
    })
 
@@ -152,7 +153,7 @@ bot.onText(/Добавить домашнее задание/, async (message) =
          inline_keyboard: menus.homework[chats[message.chat.id].class].add[chats[message.chat.id].permissions]
       })
    })
-   isWaitingForUserAnsw = { target: 'addHomeworkText', isWaiting: true }
+   isWaitingForUserAnsw = { target: 'addHomeworkType', isWaiting: true }
 
 })
 
@@ -182,12 +183,13 @@ bot.on('message', async (message) => {
          })
       })
    }
+
    if (isWaitingForUserAnsw.target == 'addDeadline') {
       tempTask.deadline = message.text
       if (homework[tempTask.lesson]) {
-         homework[tempTask.lesson].push(new Task(tempTask.text, tempTask.lesson, tempTask.deadline, message.from.id))
+         homework[tempTask.lesson].push(new Task(tempTask.text, tempTask.lesson, tempTask.deadline, message.from.id, tempTask.type))
       } else {
-         homework[tempTask.lesson] = [new Task(tempTask.text, tempTask.lesson, tempTask.deadline, message.from.id)]
+         homework[tempTask.lesson] = [new Task(tempTask.text, tempTask.lesson, tempTask.deadline, message.from.id, tempTask.type)]
       }
       await bot.sendMessage(message.chat.id, 'Домашка добавлена!', {
          reply_markup: {
@@ -241,10 +243,10 @@ bot.on('callback_query', async (message) => {
          }
          bot.answerCallbackQuery(message.id)
       } else {
-         if (homework[lessons[data.lesson]]) {
-            await bot.sendMessage(chatID, buildHomeworkMessage(homework[lessons[data.lesson]], lessons[data.lesson], chatID))
+         if (homework[Object.keys(lessons)[data.lesson]]) {
+            await bot.sendMessage(chatID, buildHomeworkMessage(homework[Object.keys(lessons)[data.lesson]], Object.keys(lessons)[data.lesson], chatID))
          } else {
-            await bot.sendMessage(chatID, `Дз по дисциплине "${lessons[data.lesson]}" нет`)
+            await bot.sendMessage(chatID, `Дз по дисциплине "${Object.keys(lessons)[data.lesson]}" нет`)
          }
          bot.answerCallbackQuery(message.id)
       }
@@ -260,10 +262,29 @@ bot.on('callback_query', async (message) => {
    }
    if (data.target == 'add') {
       if (chats[chatID].class == 'basic') return
-      let lessonID = data.lesson
-      tempTask.lesson = lessons[lessonID]
-      await bot.sendMessage(chatID, `Что задали по дисциплине "${lessons[lessonID]}"?`)
-      bot.answerCallbackQuery(message.id)
+
+      if (!tempTask.lesson) {
+         let lessonID = data.lesson
+         tempTask.lesson = Object.keys(lessons)[lessonID]
+      }
+
+      if (isWaitingForUserAnsw.target == 'addHomeworkText') {
+         await bot.sendMessage(chatID, `Что задали по дисциплине "${tempTask.lesson}"?`)
+         bot.answerCallbackQuery(message.id)
+         isWaitingForUserAnsw = { target: 'addHomeworkText', isWaiting: true }
+         tempTask.type = lessons[tempTask.lesson][data.lesson]
+
+      } else if (isWaitingForUserAnsw.target == 'addHomeworkType') {
+
+         await bot.sendMessage(chatID, `Дз по чему?`, {
+            reply_markup: JSON.stringify({
+               inline_keyboard: parseLessonsForOptions(lessons[tempTask.lesson], 1, 'add')
+            })
+         })
+         bot.answerCallbackQuery(message.id)
+         isWaitingForUserAnsw = { target: 'addHomeworkText', isWaiting: true }
+         tempTask.type = lessons[tempTask.lesson][data.lesson]
+      }
    }
    if (data.target == 'addDeadline') {
       if (chats[chatID].class == 'basic') return
@@ -273,9 +294,9 @@ bot.on('callback_query', async (message) => {
          bot.answerCallbackQuery(message.id)
       } else {
          if (homework[tempTask.lesson]) {
-            homework[tempTask.lesson].push(new Task(tempTask.text, tempTask.lesson, tempTask.deadline, message.from.id))
+            homework[tempTask.lesson].push(new Task(tempTask.text, tempTask.lesson, tempTask.deadline, message.from.id, tempTask.type))
          } else {
-            homework[tempTask.lesson] = [new Task(tempTask.text, tempTask.lesson, tempTask.deadline, message.from.id)]
+            homework[tempTask.lesson] = [new Task(tempTask.text, tempTask.lesson, tempTask.deadline, message.from.id, tempTask.type)]
          }
          await bot.sendMessage(chatID, 'Домашка добавлена!', {
             reply_markup: {

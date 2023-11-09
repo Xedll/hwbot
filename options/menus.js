@@ -21,12 +21,12 @@ const menus = {
    homework: {
       admin: {
          add: {
-            middle: [...parseLessonsForOptions(lessons, 1, 'add')],
-            junior: [...parseLessonsForOptions(lessons, 1, 'add', ['Иностранный язык'])]
+            middle: [...parseLessonsForOptions(Object.keys(lessons), 1, 'add')],
+            junior: [...parseLessonsForOptions(Object.keys(lessons), 1, 'add', ['Иностранный язык'])]
          },
          edit: {
-            middle: [...parseLessonsForOptions(lessons, 1, 'edit')],
-            junior: [...parseLessonsForOptions(lessons, 1, 'edit', ['Иностранный язык'])]
+            middle: [...parseLessonsForOptions(Object.keys(lessons), 1, 'edit')],
+            junior: [...parseLessonsForOptions(Object.keys(lessons), 1, 'edit', ['Иностранный язык'])]
          }
       }
    },
