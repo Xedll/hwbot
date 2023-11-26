@@ -2,23 +2,33 @@
 const TelegramBot = require('node-telegram-bot-api')
 require('dotenv').config()
 
+
 // const axios = require('axios').default;
 // axios.post('https://kai.ru/raspisanie?p_p_id=pubStudentSchedule_WAR_publicStudentSchedule10&p_p_lifecycle=2&p_p_resource_id=schedule', { groupId: '25212' },
 //    { headers: { 'content-type': 'application/x-www-form-urlencoded' } }
-// )
+// ).then(data => fs.writeFile('./vuzapi.json', JSON.stringify(data.data), (err) => { console.log(err) }))
 
 
 
 //Functions
 const buildHomeworkMessage = require('./commands/buildHomeworkMessage.js')
-const parseLessonsForOptions = require('./commands/parseLessonsForOptions.js')
+const parseLessonsForOptions = require('./commands/parseLessonsForOptions.js') //Передаётся список предметов
 const { parse } = require('dotenv')
 
 //Options
 const commands = require('./options/commands.js')
 const menus = require('./options/menus.js')
 const lessons = require('./options/lessons.js');
-const parseLessonsForDays = require('./commands/parseLessonsForDays.js');
+
+const parseLessonsForDays = require('./commands/parseLessonsForDays.js'); //Передаётся "сырая" дата апи вуза
+const getListOfLessons = require('./commands/getListOfLessons.js'); //Передаётся "сырая" дата апи вуза
+
+
+
+const APIData = require('./vuzapi.json')
+const setDeadline = require('./commands/setDeadline.js')
+
+
 const homework = {}
 const chats = {}
 const admins = {
@@ -33,6 +43,7 @@ let tempTask = {}
 const resetUserInput = () => {
    isWaitingForUserAnsw = { "target": null, "isWaiting": false }
 }
+
 
 class Task {
    constructor(text, lesson, deadline, creator, type) {
@@ -160,8 +171,15 @@ bot.onText(/Добавить домашнее задание/, async (message) =
 bot.onText(/Изменить домашнее задание/, async (message) => {
    if (!(message.chat.id in chats)) return
    if (chats[message.chat.id].class == 'basic') return
-   await bot.sendMessage(message.chat.id, 'Введи айди дз, которое ты хочешь изменить.')
+   await bot.sendMessage(message.chat.id, 'Введи айди дз, которое Вы хотите изменить.')
    isWaitingForUserAnsw = { target: 'editHomework', isWaiting: true }
+})
+
+bot.onText(/Удалить домашнее задание/, async (message) => {
+   if (!(message.chat.id in chats)) return
+   if (chats[message.chat.id].class == 'basic') return
+   await bot.sendMessage(message.chat.id, 'Введи айди дз, которое Вы хотите удалить.')
+   isWaitingForUserAnsw = { target: 'deleteHomework', isWaiting: true }
 })
 
 bot.on('message', async (message) => {
@@ -186,10 +204,11 @@ bot.on('message', async (message) => {
 
    if (isWaitingForUserAnsw.target == 'addDeadline') {
       tempTask.deadline = message.text
-      if (homework[tempTask.lesson]) {
-         homework[tempTask.lesson].push(new Task(tempTask.text, tempTask.lesson, tempTask.deadline, message.from.id, tempTask.type))
+      let taskForAdd = new Task(tempTask.text, tempTask.lesson, tempTask.deadline, message.chat.id, tempTask.type)
+      if (homework[taskForAdd.lesson]) {
+         homework[taskForAdd.lesson].push(taskForAdd)
       } else {
-         homework[tempTask.lesson] = [new Task(tempTask.text, tempTask.lesson, tempTask.deadline, message.from.id, tempTask.type)]
+         homework[taskForAdd.lesson] = [taskForAdd]
       }
       await bot.sendMessage(message.chat.id, 'Домашка добавлена!', {
          reply_markup: {
@@ -215,6 +234,26 @@ bot.on('message', async (message) => {
       })
       resetUserInput()
    }
+   if (isWaitingForUserAnsw.target == 'deleteHomework') {
+      let homeworkKeys = Object.keys(homework)
+      let homeworkIndexForDelete = null
+      homeworkKeys.forEach(homeworkLesson => {
+         for (let i = 0; i < homework[homeworkLesson].length; i++) {
+            if (homework[homeworkLesson][i].creator == message.chat.id && homework[homeworkLesson][i].creationDate == message.text) {
+               homeworkIndexForDelete = i
+            }
+         }
+         if (homeworkIndexForDelete != null) {
+            homework[homeworkLesson] = homework[homeworkLesson].filter((item, index) => index != homeworkIndexForDelete)
+         }
+      })
+      await bot.sendMessage(message.chat.id, 'Дз успешно удалено.', {
+         reply_markup: {
+            keyboard: menus[chats[message.chat.id].class]
+         }
+      })
+      resetUserInput()
+   }
 })
 
 bot.on('callback_query', async (message) => {
@@ -232,7 +271,6 @@ bot.on('callback_query', async (message) => {
 
    let data = JSON.parse(message.data)
    if (data.target == 'homework') {
-      console.log(homework)
       if (data.lesson == 'Всё') {
          if (Object.keys(homework).length > 0) {
             for (let lesson of Object.keys(homework)) {
@@ -293,16 +331,19 @@ bot.on('callback_query', async (message) => {
          await bot.sendMessage(chatID, 'Какой дедлайн у домашки?')
          bot.answerCallbackQuery(message.id)
       } else {
-         if (homework[tempTask.lesson]) {
-            homework[tempTask.lesson].push(new Task(tempTask.text, tempTask.lesson, tempTask.deadline, message.from.id, tempTask.type))
+         let taskForAdd = new Task(tempTask.text, tempTask.lesson, tempTask.deadline, message.from.id, tempTask.type)
+         setDeadline(parseLessonsForDays(APIData), taskForAdd, 0) // !!ДОБАВИТЬ ОБРАБОТКУ ЧЕТНОСТИ НЕДЕЛИ
+         if (homework[taskForAdd]) {
+            homework[taskForAdd].push(taskForAdd)
          } else {
-            homework[tempTask.lesson] = [new Task(tempTask.text, tempTask.lesson, tempTask.deadline, message.from.id, tempTask.type)]
+            homework[taskForAdd] = [taskForAdd]
          }
          await bot.sendMessage(chatID, 'Домашка добавлена!', {
             reply_markup: {
                keyboard: menus[chats[chatID].class]
             }
          })
+
          resetUserInput()
          tempTask = {}
          bot.answerCallbackQuery(message.id)

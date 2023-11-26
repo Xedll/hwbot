@@ -1,13 +1,23 @@
 function getListOfLessons(schedule) {
-   let lessons = [];
-   let numberOfDays = Object.keys(schedule.data).length;
+   let lessons = {};
+   let numberOfDays = Object.keys(schedule).length;
 
    for (let i = 1; i <= numberOfDays; i++) {
-      let numberOfLessons = schedule.data[i].length;
+      let numberOfLessons = schedule[i].length;
+
       for (let j = 0; j < numberOfLessons; j++) {
-         let lessonName = schedule.data[i][j].disciplName.match(/(\S+)/g).join(' ');
-         if (lessons.includes(lessonName) == false || lessonName == 'Физическая культура и спорт (элективная)') {
-            lessons.push(lessonName);
+         let lessonsName = schedule[i][j].disciplName.match(/(\S+)/g).join(" ");
+         let lessonType = schedule[i][j].disciplType.match(/(\S+)/g).join(" ");
+
+         if (lessons[lessonsName] == undefined) {
+            Object.assign(lessons, { [lessonsName]: [] });
+            lessons[lessonsName].push(lessonType);
+         }
+         else if (lessons[lessonsName].includes(lessonType)) {
+            continue;
+         }
+         else {
+            lessons[lessonsName].push(lessonType);
          }
       }
    }

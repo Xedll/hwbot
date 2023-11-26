@@ -14,14 +14,14 @@ function parseLessonsForDays(schedule) {
    }
 
    for (let i = 1; i <= numberOfDays; i++) {
-      let numberOfLessons = schedule.data[i].length;
+      let numberOfLessons = schedule[i].length;
 
       for (let j = 0; j < numberOfLessons; j++) {
          let lessonInformation = createLessonInformation();
-         lessonInformation.name = removeExtraSpaces(schedule.data[i][j].disciplName);
-         lessonInformation.type = removeExtraSpaces(schedule.data[i][j].disciplType);
+         lessonInformation.name = removeExtraSpaces(schedule[i][j].disciplName);
+         lessonInformation.type = removeExtraSpaces(schedule[i][j].disciplType);
 
-         let keyWordInSchedule = schedule.data[i][j].dayDate.trim().toLowerCase();
+         let keyWordInSchedule = schedule[i][j].dayDate.trim().toLowerCase();
 
          if (Object.keys(splitLessons).includes(keyWordInSchedule)) {
             splitLessons[keyWordInSchedule][i].push(lessonInformation);
