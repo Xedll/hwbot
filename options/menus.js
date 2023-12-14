@@ -2,32 +2,23 @@ const parseLessonsForOptions = require("../commands/parseLessonsForOptions")
 const lessons = require("./lessons")
 
 const menus = {
-   basic: [
-      ['Профиль'], ['Посмотреть дз'], ['Разное']
-   ],
-   admin: [
-      ['Профиль'], ['Посмотреть дз'], ['Разное'], ['Admin']
-   ],
+   basic: [['Профиль'], ['Посмотреть дз'], ['Разное']],
    'разное': {
       basic: [['Выбрать группу по Английскому Языку'], ['Назад']],
-      admin: {
-         middle: [['Выбрать группу по Английскому Языку'], ['Работа с домашним заданием'], ['Назад'], ['Мидл']],
-         junior: [['Выбрать группу по Английскому Языку'], ['Работа с домашним заданием'], ['Назад'], ['Джун']]
-      }
+      middle: [['Выбрать группу по Английскому Языку'], ['Работа с домашним заданием'], ['Назад'], ['Мидл']],
+      junior: [['Выбрать группу по Английскому Языку'], ['Работа с домашним заданием'], ['Назад'], ['Джун']]
    },
    'Работа с домашним заданием': {
       basic: [["Изменить домашнее задание"], ["Добавить домашнее задание"], ["Удалить домашнее задание"], ['Назад']]
    },
    homework: {
-      admin: {
-         add: {
-            middle: [...parseLessonsForOptions(Object.keys(lessons), 1, 'add')],
-            junior: [...parseLessonsForOptions(Object.keys(lessons), 1, 'add', ['Иностранный язык'])]
-         },
-         edit: {
-            middle: [...parseLessonsForOptions(Object.keys(lessons), 1, 'edit')],
-            junior: [...parseLessonsForOptions(Object.keys(lessons), 1, 'edit', ['Иностранный язык'])]
-         }
+      middle: {
+         add: [...parseLessonsForOptions(Object.keys(lessons), 1, 'add')],
+         edit: [...parseLessonsForOptions(Object.keys(lessons), 1, 'edit')],
+      },
+      junior: {
+         add: [...parseLessonsForOptions(Object.keys(lessons), 1, 'add', ['Иностранный язык'])],
+         edit: [...parseLessonsForOptions(Object.keys(lessons), 1, 'edit', ['Иностранный язык'])]
       }
    },
    permissions: {
