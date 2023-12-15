@@ -24,7 +24,7 @@ const menus = {
    permissions: {
       senjor: lessons,
       middle: lessons,
-      junior: ['Иностранный язык'],
+      junior: { 'Иностранный язык': lessons['Иностранный язык'] },
       basic: [],
    }
 }

@@ -3,9 +3,19 @@ const sqlite3 = require('sqlite3');
 const TelegramBot = require('node-telegram-bot-api')
 require('dotenv').config()
 const { parse } = require('dotenv')
+const express = require('express')
+
+const server = express()
+server.listen(3000, () => {
+   console.log('Server is listening on port 3000')
+})
+server.get('/', (req, res) => {
+   res.send(200)
+})
 
 
-// const axios = require('axios').default;
+
+// const axios =require('axios').default;
 // axios.post('https://kai.ru/raspisanie?p_p_id=pubStudentSchedule_WAR_publicStudentSchedule10&p_p_lifecycle=2&p_p_resource_id=schedule', { groupId: '25212' },
 //    { headers: { 'content-type': 'application/x-www-form-urlencoded' } }
 // ).then(data => fs.writeFile('./vuzapi.json', JSON.stringify(data.data), (err) => { console.log(err) }))
@@ -119,9 +129,10 @@ getHomeworkFromDB();
 //!!TIMER
 
 setInterval(async () => { //!!Прок на каждые 5 минут
-   if (new Date().getHours() + 1 == 12 && (new Date().getMinutes() + 1 >= 0 || new Date().getMinutes() + 1 <= 5)) {
+   if (new Date().getUTCHours() + 3 == 14 && (new Date().getMinutes() + 1 >= 0 || new Date().getMinutes() + 1 <= 5)) {
       await getUsersFromDB()
       await getHomeworkFromDB()
+      await new Promise((resolve) => setTimeout(resolve, 250));
       if (getHomeworkForTomorrow(homework)) {
          for (let chat of Object.keys(chats)) {
             let homeworkForTomorrow = getHomeworkForTomorrow(homework)
@@ -137,6 +148,7 @@ setInterval(async () => { //!!Прок на каждые 5 минут
 
 bot.onText(/\/start/, async (message) => {
    await getUsersFromDB()
+   await new Promise((resolve) => setTimeout(resolve, 250));
    if (!(message.chat.id in chats)) {
       let tempUser = { permissions: 1 }
       let isAdmin = ''
@@ -163,6 +175,19 @@ bot.onText(/\/start/, async (message) => {
          }
       })
    } else {
+      let userPermission = ''
+      for (let permission of Object.keys(admins)) {
+         if (admins[permission].includes(message.chat.id)) {
+            userPermission = permission
+         }
+      }
+      console.log(userPermission, chats[message.chat.id].permission_title)
+      if (chats[message.chat.id].permission_title != userPermission && userPermission) {
+         await db.run('UPDATE student SET student_permission = (SELECT permission_id FROM permission WHERE permission_title=?) WHERE student_id = ?', [userPermission, message.chat.id], (err) => {
+            if (err) return console.error(err.message)
+         })
+      }
+
       await bot.sendMessage(message.chat.id, 'Что делаем?', {
          reply_markup: {
             keyboard: menus.basic
@@ -194,7 +219,7 @@ bot.onText(/Посмотреть дз/, async (message) => {
    if (!(message.chat.id in chats)) return
    await bot.sendMessage(message.chat.id, "По чему смотрим дз?", {
       reply_markup: JSON.stringify({
-         inline_keyboard: [[{ text: 'Дз по всем дисциплинам', callback_data: JSON.stringify({ target: 'homework', lesson: 'Всё' }) }], ...parseLessonsForOptions(Object.keys(lessons), 2, 'homework')]
+         inline_keyboard: [[{ text: 'Дз на завтра', callback_data: JSON.stringify({ target: 'homework', lesson: 'Завтра' }) }], [{ text: 'Дз по всем дисциплинам', callback_data: JSON.stringify({ target: 'homework', lesson: 'Всё' }) }], ...parseLessonsForOptions(Object.keys(lessons), 2, 'homework')]
       })
    })
 
@@ -225,6 +250,8 @@ bot.onText(/Назад/, async (message) => {
 })
 
 bot.onText(/Добавить домашнее задание/, async (message) => {
+   await getUsersFromDB()
+   await new Promise((resolve) => setTimeout(resolve, 250));
    if (!(message.chat.id in chats)) return
    if (chats[message.chat.id].permission_title == 'basic') return
    isWaitingForUserAnsw = { target: 'addHomeworkType', isWaiting: true }
@@ -271,19 +298,23 @@ bot.on('message', async (message) => {
    }
 
    if (isWaitingForUserAnsw.target == 'addDeadline') {
-      let tempDeadline = message.text.match(/(\d{2})\.(\d{2})\.(\d{4})/)
-      tempTask.deadline = new Date((tempDeadline[1] - 1) * 86_400_000 + (tempDeadline[2] - 1) * 2_629_746_000 + (tempDeadline[3] - 1970) * 31_556_952_000)
-      let taskForAdd = new Task(tempTask.text, tempTask.lesson, tempTask.deadline, message.chat.id, tempTask.type)
-      db.run('INSERT INTO homework(homework_text,homework_lesson,homework_deadline,homework_creator,homework_type,homework_english_group) VALUES (?,?,?,?,?,?)', [taskForAdd.text, taskForAdd.lesson, taskForAdd.deadline, taskForAdd.creator, taskForAdd.type, 0], (err) => {
-         if (err) return console.error(err)
-      })
-      await bot.sendMessage(message.chat.id, 'Домашка добавлена!', {
-         reply_markup: {
-            keyboard: menus.basic
-         }
-      })
-      resetUserInput()
-      resetTempTask()
+      try {
+         let tempDeadline = message.text.match(/(\d{2})\.(\d{2})\.(\d{4})/)
+         tempTask.deadline = new Date((tempDeadline[1] - 1) * 86_400_000 + (tempDeadline[2] - 1) * 2_629_746_000 + (tempDeadline[3] - 1970) * 31_556_952_000)
+         let taskForAdd = new Task(tempTask.text, tempTask.lesson, tempTask.deadline, message.chat.id, tempTask.type)
+         db.run('INSERT INTO homework(homework_text,homework_lesson,homework_deadline,homework_creator,homework_type,homework_english_group) VALUES (?,?,?,?,?,?)', [taskForAdd.text, taskForAdd.lesson, taskForAdd.deadline, taskForAdd.creator, taskForAdd.type, 0], (err) => {
+            if (err) return console.error(err)
+         })
+         await bot.sendMessage(message.chat.id, 'Домашка добавлена!', {
+            reply_markup: {
+               keyboard: menus.basic
+            }
+         })
+         resetUserInput()
+         resetTempTask()
+      } catch (error) {
+         await bot.sendMessage(message.chat.id, 'Дедлайн введен неверно. Проверьте правильность написания дедлайна. Формат: дд.мм.гггг, между данными ставится точка.')
+      }
    }
    if (isWaitingForUserAnsw.target == 'editHomework') {
       await bot.sendMessage(message.chat.id, 'Что меняем у дз?', {
@@ -301,22 +332,30 @@ bot.on('message', async (message) => {
          }
       })
       resetUserInput()
-      getHomeworkFromDB()
+      await getHomeworkFromDB()
+      await new Promise((resolve) => setTimeout(resolve, 250));
    }
    if (isWaitingForUserAnsw.target == 'rewriteNewDeadline') {
-      let tempDeadline = message.text.match(/(\d{2})\.(\d{2})\.(\d{4})/)
-      isWaitingForUserAnsw.taskForEdit.homework_deadline = new Date((+tempDeadline[1] - 1) * 86_400_000 + (+tempDeadline[2] - 1) * 2_629_746_000 + (+tempDeadline[3] - 1970) * 31_556_952_000)
-      db.run('UPDATE homework SET homework_deadline=? WHERE homework_id=?', [isWaitingForUserAnsw.taskForEdit.homework_deadline, isWaitingForUserAnsw.taskForEdit.homework_id])
-      await bot.sendMessage(message.chat.id, 'Дз успешно изменено.', {
-         reply_markup: {
-            keyboard: menus.basic
-         }
-      })
-      resetUserInput()
-      getHomeworkFromDB()
+      try {
+         let tempDeadline = message.text.match(/(\d{2})\.(\d{2})\.(\d{4})/)
+         isWaitingForUserAnsw.taskForEdit.homework_deadline = new Date((+tempDeadline[1] - 1) * 86_400_000 + (+tempDeadline[2] - 1) * 2_629_746_000 + (+tempDeadline[3] - 1970) * 31_556_952_000)
+         db.run('UPDATE homework SET homework_deadline=? WHERE homework_id=?', [isWaitingForUserAnsw.taskForEdit.homework_deadline, isWaitingForUserAnsw.taskForEdit.homework_id])
+         await bot.sendMessage(message.chat.id, 'Дз успешно изменено.', {
+            reply_markup: {
+               keyboard: menus.basic
+            }
+         })
+         resetUserInput()
+         await getHomeworkFromDB()
+      } catch (error) {
+         await bot.sendMessage(message.chat.id, 'Дедлайн введен неверно. Проверьте правильность написания дедлайна. Формат: дд.мм.гггг, между данными ставится точка.')
+      }
+
+
    }
    if (isWaitingForUserAnsw.target == 'deleteHomework') {
-      getHomeworkFromDB()
+      await getHomeworkFromDB()
+      await new Promise((resolve) => setTimeout(resolve, 250));
 
       let homeworkLessons = Object.keys(homework)
       let isHomeworkHaveFound = false
@@ -335,7 +374,8 @@ bot.on('message', async (message) => {
                keyboard: menus.basic
             }
          })
-         getHomeworkFromDB()
+         await getHomeworkFromDB()
+         await new Promise((resolve) => setTimeout(resolve, 250));
          resetUserInput()
       } else {
          await bot.sendMessage(message.chat.id, 'Дз не было найдено.', {
@@ -364,15 +404,26 @@ bot.on('callback_query', async (message) => {
    let data = JSON.parse(message.data)
 
    if (data.target == 'homework') {
+      await getHomeworkFromDB()
+      await getUsersFromDB()
+      await new Promise((resolve) => setTimeout(resolve, 250));
       if (data.lesson == 'Всё') {
-         await getHomeworkFromDB()
-         console.log(homework)
          if (Object.keys(homework).length > 0) {
             for (let lesson of Object.keys(homework)) {
                await bot.sendMessage(chatID, buildHomeworkMessage(homework[lesson], lesson, chatID), { parse_mode: 'HTML' })
             }
          } else {
             await bot.sendMessage(chatID, `Дз нету!`)
+         }
+         bot.answerCallbackQuery(message.id)
+      } else if (data.lesson == 'Завтра') {
+         let homeworkForTomorrow = getHomeworkForTomorrow(homework)
+         if (Object.keys(homeworkForTomorrow).length > 0) {
+            for (let lesson of Object.keys(homeworkForTomorrow)) {
+               await bot.sendMessage(chatID, buildHomeworkMessage(homework[lesson], lesson, chatID), { parse_mode: 'HTML' })
+            }
+         } else {
+            await bot.sendMessage(chatID, `Дз на завтра отсутствует.`)
          }
          bot.answerCallbackQuery(message.id)
       } else {
@@ -461,11 +512,12 @@ bot.on('callback_query', async (message) => {
    if (data.target == 'editTextForHomework') {
       if (chats[chatID].class == 'basic') return
       let taskForEdit = null
-      getHomeworkFromDB()
+      await getHomeworkFromDB()
+      await new Promise((resolve) => setTimeout(resolve, 250));
       for (let key of Object.keys(homework)) {
          homework[key].forEach(async item => {
-            if (item.creationDate == data.taskID) {
-               if (item.homework_lesson in menus.permissions[chats[chatID].permission_title] && item.creator == chatID) {
+            if (item.homework_id == data.taskID) {
+               if (item.homework_lesson in menus.permissions[chats[chatID].permission_title] && item.homework_creator == chatID) {
                   taskForEdit = item
                }
             }
@@ -490,8 +542,10 @@ bot.on('callback_query', async (message) => {
       if (chats[chatID].class == 'basic') return
       let taskForEdit = null
       await getHomeworkFromDB()
+      await new Promise((resolve) => setTimeout(resolve, 250));
       for (let key of Object.keys(homework)) {
          homework[key].forEach(async item => {
+            console.log(item, data.taskID, 513)
             if (item.homework_id == data.taskID) {
                if (item.homework_lesson in menus.permissions[chats[chatID].permission_title] && item.homework_creator == chatID) {
                   taskForEdit = item
