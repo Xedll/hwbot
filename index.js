@@ -1,5 +1,5 @@
 //Libs
-const sqlite3 = require('sqlite3');
+const sqlite3 = require('sqlite3').verbose();
 const TelegramBot = require('node-telegram-bot-api')
 require('dotenv').config()
 const { parse } = require('dotenv')
@@ -10,7 +10,7 @@ server.listen(3000, () => {
    console.log('Server is listening on port 3000')
 })
 server.get('/', (req, res) => {
-   res.send(200)
+   res.sendStatus(200)
 })
 
 
@@ -38,21 +38,13 @@ const APIData = require('./vuzapi.json')
 const setDeadline = require('./commands/setDeadline.js')
 const getEvennessOfWeek = require('./commands/getEvennessOfWeek.js')
 
-
+let permission = []
 let homework = {}
 let chats = {}
-let admins = {
-   senjor: [],
-   middle: [1386879737],
-   junior: [968717848,],
-   //эльза: 1983335577, я:1386879737, паша: 968717848
-}
 
 const db = new sqlite3.Database('./db/homework.db', sqlite3.OPEN_READWRITE, (err) => {
    if (err) console.error(err)
 })
-
-
 
 let isWaitingForUserAnsw = { "target": null, "isWaiting": false }
 let tempTask = {}
@@ -92,7 +84,7 @@ const getUsersFromDB = async () => {
       if (err) return console.error(err.message)
       await setUsersFromDB(rows)
    })
-
+   await new Promise((resolve) => setTimeout(resolve, 250));
 }
 
 const setHomeworkFromDB = (data) => {
@@ -104,8 +96,21 @@ const getHomeworkFromDB = async () => {
       if (err) return console.error(err.message)
       await setHomeworkFromDB(rows)
    })
+   await new Promise((resolve) => setTimeout(resolve, 250));
 }
 
+const setPermissionFromDB = (data) => {
+   if (data <= 0) return {}
+   permission = [...data]
+}
+const getPermissionFromDB = async () => {
+   await db.all('SELECT * FROM permission', [], async (err, rows) => {
+      if (err) return console.error(err.message)
+      await setPermissionFromDB(rows)
+   })
+
+   await new Promise((resolve) => setTimeout(resolve, 250));
+}
 //ENV
 const BOT_TOKEN = process.env.api_key_bot || '0'
 //const ADMIN_PASSWORD = process.send.admin_password
@@ -129,16 +134,16 @@ getHomeworkFromDB();
 //!!TIMER
 
 setInterval(async () => { //!!Прок на каждые 5 минут
-   if (new Date().getUTCHours() + 3 == 14 && (new Date().getMinutes() + 1 >= 0 || new Date().getMinutes() + 1 <= 5)) {
+   if (new Date().getUTCHours() + 3 == 14 && (new Date().getMinutes() + 1 >= 0 && new Date().getMinutes() + 1 <= 5)) {
       await getUsersFromDB()
       await getHomeworkFromDB()
-      await new Promise((resolve) => setTimeout(resolve, 250));
+
       if (getHomeworkForTomorrow(homework)) {
          for (let chat of Object.keys(chats)) {
             let homeworkForTomorrow = getHomeworkForTomorrow(homework)
             for (let lesson of Object.keys(homeworkForTomorrow)) {
                await bot.sendMessage(chat, '#завтра\nДомашка на завтра:')
-               await bot.sendMessage(chat, buildHomeworkMessage(homeworkForTomorrow[lesson], lesson, chat), { parse_mode: 'HTML' })
+               await bot.sendMessage(chat, buildHomeworkMessage(homeworkForTomorrow[lesson], lesson, chat, chats[chat].student_nickname), { parse_mode: 'HTML' })
             }
          }
       }
@@ -148,51 +153,24 @@ setInterval(async () => { //!!Прок на каждые 5 минут
 
 bot.onText(/\/start/, async (message) => {
    await getUsersFromDB()
-   await new Promise((resolve) => setTimeout(resolve, 250));
    if (!(message.chat.id in chats)) {
-      let tempUser = { permissions: 1 }
-      let isAdmin = ''
-      Object.keys(admins).forEach(IterPermission => {
-         admins[IterPermission].forEach(item => {
-            if (item == message.chat.id) {
-               isAdmin = IterPermission
-            }
-         })
-      })
-      if (isAdmin == 'senior') {
-         tempUser.permissions = 4
-      } else if (isAdmin == 'middle') {
-         tempUser.permissions = 3
-      } else if (isAdmin == 'junior') {
-         tempUser.permissions = 2
-      }
 
-      db.run('INSERT INTO student(student_id,student_nickname,student_permission,student_english) VALUES (?,?,?,?)', [message.from.id, message.from.username, tempUser.permissions, 0])
+      db.run('INSERT INTO student(student_id,student_nickname,student_permission,student_english) VALUES (?,?,SELECT permission_id FROM permission WHERE permission_title = ?,?)', [message.from.id, message.from.username, 'basic', 0])
 
       await bot.sendMessage(message.chat.id, 'Сюда в общем то что может бот делать напиши', {
          reply_markup: {
             keyboard: menus.basic
          }
       })
+
    } else {
-      let userPermission = ''
-      for (let permission of Object.keys(admins)) {
-         if (admins[permission].includes(message.chat.id)) {
-            userPermission = permission
-         }
-      }
-      console.log(userPermission, chats[message.chat.id].permission_title)
-      if (chats[message.chat.id].permission_title != userPermission && userPermission) {
-         await db.run('UPDATE student SET student_permission = (SELECT permission_id FROM permission WHERE permission_title=?) WHERE student_id = ?', [userPermission, message.chat.id], (err) => {
-            if (err) return console.error(err.message)
-         })
-      }
 
       await bot.sendMessage(message.chat.id, 'Что делаем?', {
          reply_markup: {
             keyboard: menus.basic
          }
       })
+
    }
 })
 
@@ -251,7 +229,6 @@ bot.onText(/Назад/, async (message) => {
 
 bot.onText(/Добавить домашнее задание/, async (message) => {
    await getUsersFromDB()
-   await new Promise((resolve) => setTimeout(resolve, 250));
    if (!(message.chat.id in chats)) return
    if (chats[message.chat.id].permission_title == 'basic') return
    isWaitingForUserAnsw = { target: 'addHomeworkType', isWaiting: true }
@@ -277,6 +254,31 @@ bot.onText(/Удалить домашнее задание/, async (message) => 
    isWaitingForUserAnsw = { target: 'deleteHomework', isWaiting: true }
 })
 
+bot.onText(/Действия с админами/, async (message) => {
+   if (!(message.chat.id in chats)) return
+   if (chats[message.chat.id].permission_title != 'senjor') return
+
+   await bot.sendMessage(message.chat.id, 'Что делаем?', {
+      reply_markup: {
+         keyboard: [...menus[message.text], ['Назад']]
+      }
+   })
+
+})
+
+bot.onText(/Изменить права юзеру/, async (message) => {
+   if (!(message.chat.id in chats)) return
+   if (chats[message.chat.id].permission_title != 'senjor') return
+   await getUsersFromDB()
+   let userList = ''
+
+   for (let user of Object.keys(chats)) {
+      userList += `ID: <code>${chats[user].student_id}</code>. Username: @${chats[user].student_nickname}. Premissions: ${chats[user].permission_title}.\n`
+   }
+   await bot.sendMessage(message.chat.id, `Введите айди пользователя, которому будем менять права.\n${userList}`, { parse_mode: 'HTML' })
+   isWaitingForUserAnsw = { target: 'editPermission', isWaiting: true, data: message.text }
+})
+
 bot.on('message', async (message) => {
    if (!(message.chat.id in chats) && (message.text != '/start')) {
       await bot.sendMessage(message.chat.id, 'Пожалуйста, пропишите /start для началы пользования ботом.', {
@@ -296,7 +298,6 @@ bot.on('message', async (message) => {
          }
       })
    }
-
    if (isWaitingForUserAnsw.target == 'addDeadline') {
       try {
          let tempDeadline = message.text.match(/(\d{2})\.(\d{2})\.(\d{4})/)
@@ -333,7 +334,6 @@ bot.on('message', async (message) => {
       })
       resetUserInput()
       await getHomeworkFromDB()
-      await new Promise((resolve) => setTimeout(resolve, 250));
    }
    if (isWaitingForUserAnsw.target == 'rewriteNewDeadline') {
       try {
@@ -355,7 +355,6 @@ bot.on('message', async (message) => {
    }
    if (isWaitingForUserAnsw.target == 'deleteHomework') {
       await getHomeworkFromDB()
-      await new Promise((resolve) => setTimeout(resolve, 250));
 
       let homeworkLessons = Object.keys(homework)
       let isHomeworkHaveFound = false
@@ -375,7 +374,7 @@ bot.on('message', async (message) => {
             }
          })
          await getHomeworkFromDB()
-         await new Promise((resolve) => setTimeout(resolve, 250));
+
          resetUserInput()
       } else {
          await bot.sendMessage(message.chat.id, 'Дз не было найдено.', {
@@ -386,6 +385,20 @@ bot.on('message', async (message) => {
          resetUserInput()
       }
 
+   }
+   if (isWaitingForUserAnsw.target == 'editPermission') {
+      if (!isWaitingForUserAnsw.data) return
+      await getPermissionFromDB()
+
+      let temp = []
+      for (let item of permission) {
+         temp.push([{ text: item.permission_title, callback_data: JSON.stringify({ target: 'editPermission', permission: item.permission_id, user: message.text }) }])
+      }
+      await bot.sendMessage(message.chat.id, 'Какой уровень прав установить пользователю?', {
+         reply_markup: {
+            inline_keyboard: temp
+         }
+      })
    }
 })
 
@@ -406,11 +419,10 @@ bot.on('callback_query', async (message) => {
    if (data.target == 'homework') {
       await getHomeworkFromDB()
       await getUsersFromDB()
-      await new Promise((resolve) => setTimeout(resolve, 250));
       if (data.lesson == 'Всё') {
          if (Object.keys(homework).length > 0) {
             for (let lesson of Object.keys(homework)) {
-               await bot.sendMessage(chatID, buildHomeworkMessage(homework[lesson], lesson, chatID), { parse_mode: 'HTML' })
+               await bot.sendMessage(chatID, buildHomeworkMessage(homework[lesson], lesson, chatID, chats[chatID].student_nickname), { parse_mode: 'HTML' })
             }
          } else {
             await bot.sendMessage(chatID, `Дз нету!`)
@@ -420,7 +432,7 @@ bot.on('callback_query', async (message) => {
          let homeworkForTomorrow = getHomeworkForTomorrow(homework)
          if (Object.keys(homeworkForTomorrow).length > 0) {
             for (let lesson of Object.keys(homeworkForTomorrow)) {
-               await bot.sendMessage(chatID, buildHomeworkMessage(homework[lesson], lesson, chatID), { parse_mode: 'HTML' })
+               await bot.sendMessage(chatID, buildHomeworkMessage(homework[lesson], lesson, chatID, chats[chatID].student_nickname), { parse_mode: 'HTML' })
             }
          } else {
             await bot.sendMessage(chatID, `Дз на завтра отсутствует.`)
@@ -428,7 +440,7 @@ bot.on('callback_query', async (message) => {
          bot.answerCallbackQuery(message.id)
       } else {
          if (homework[Object.keys(lessons)[data.lesson]]) {
-            await bot.sendMessage(chatID, buildHomeworkMessage(homework[Object.keys(lessons)[data.lesson]], Object.keys(lessons)[data.lesson], chatID), { parse_mode: 'HTML' })
+            await bot.sendMessage(chatID, buildHomeworkMessage(homework[Object.keys(lessons)[data.lesson]], Object.keys(lessons)[data.lesson], chatID, chats[chatID].student_nickname), { parse_mode: 'HTML' })
          } else {
             await bot.sendMessage(chatID, `Дз по дисциплине "${Object.keys(lessons)[data.lesson]}" нет`)
          }
@@ -513,11 +525,12 @@ bot.on('callback_query', async (message) => {
       if (chats[chatID].class == 'basic') return
       let taskForEdit = null
       await getHomeworkFromDB()
-      await new Promise((resolve) => setTimeout(resolve, 250));
+      await getUsersFromDB()
+
       for (let key of Object.keys(homework)) {
          homework[key].forEach(async item => {
             if (item.homework_id == data.taskID) {
-               if (item.homework_lesson in menus.permissions[chats[chatID].permission_title] && item.homework_creator == chatID) {
+               if (item.homework_lesson in menus.permissions[chats[chatID].permission_title] && (item.homework_creator == chatID || chats[chatID].permission_id == 4)) {
                   taskForEdit = item
                }
             }
@@ -533,7 +546,7 @@ bot.on('callback_query', async (message) => {
          resetUserInput()
       } else {
          await bot.sendMessage(chatID, 'Введи новый текст для')
-         await bot.sendMessage(chatID, buildHomeworkMessage([taskForEdit], taskForEdit.homework_lesson, chatID), { parse_mode: 'HTML' })
+         await bot.sendMessage(chatID, buildHomeworkMessage([taskForEdit], taskForEdit.homework_lesson, chatID, chats[chatID].student_nickname), { parse_mode: 'HTML' })
          bot.answerCallbackQuery(message.id)
          isWaitingForUserAnsw = { target: 'rewriteNewText', isWaiting: true, taskForEdit: taskForEdit }
       }
@@ -542,12 +555,12 @@ bot.on('callback_query', async (message) => {
       if (chats[chatID].class == 'basic') return
       let taskForEdit = null
       await getHomeworkFromDB()
-      await new Promise((resolve) => setTimeout(resolve, 250));
+      await getUsersFromDB()
       for (let key of Object.keys(homework)) {
          homework[key].forEach(async item => {
             console.log(item, data.taskID, 513)
             if (item.homework_id == data.taskID) {
-               if (item.homework_lesson in menus.permissions[chats[chatID].permission_title] && item.homework_creator == chatID) {
+               if (item.homework_lesson in menus.permissions[chats[chatID].permission_title] && (item.homework_creator == chatID || chats[chatID].permission_id == 4)) {
                   taskForEdit = item
                }
             }
@@ -563,9 +576,30 @@ bot.on('callback_query', async (message) => {
          resetUserInput()
       } else {
          await bot.sendMessage(chatID, 'Введи новый дедлайн для (Ответ требует формата дд.мм.гггг, например 01.01.1970. Обратите внимание на кол-во дней в месяце, чтобы домашка установилась правильно):')
-         await bot.sendMessage(chatID, buildHomeworkMessage([taskForEdit], taskForEdit.homework_lesson, chatID), { parse_mode: 'HTML' })
+         await bot.sendMessage(chatID, buildHomeworkMessage([taskForEdit], taskForEdit.homework_lesson, chatID, chats[chatID].student_nickname), { parse_mode: 'HTML' })
          bot.answerCallbackQuery(message.id)
          isWaitingForUserAnsw = { target: 'rewriteNewDeadline', isWaiting: true, taskForEdit: taskForEdit }
       }
+   }
+   if (data.target == 'editPermission') {
+      if (data.user == '1386879737') {
+         await bot.sendMessage(chatID, 'Вы не можете изменить права данному пользователю.', {
+            reply_markup: {
+               keyboard: menus.basic
+            }
+         })
+         await getUsersFromDB()
+      } else {
+         await db.run('UPDATE student SET student_permission = ? WHERE student_id = ?', [data.permission, data.user], (err) => {
+            if (err) return console.error(err.message)
+         })
+         await bot.sendMessage(chatID, 'Права пользователя обновлены', {
+            reply_markup: {
+               keyboard: menus.basic
+            }
+         })
+         await getUsersFromDB()
+      }
+      bot.answerCallbackQuery(message.id)
    }
 })
