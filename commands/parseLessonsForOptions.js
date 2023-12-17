@@ -14,7 +14,6 @@ function parseLessonsForOptions(lessons, numberOfButtons, target, arr = [], opti
          temp.push({ text: item, callback_data: JSON.stringify({ target: target, lesson: index, ...optionalData }) })
       })
    }
-
    for (let i = 0, j = 0; i < temp.length; i++) {
 
       if ((i + 1) % numberOfButtons != 0) {
@@ -29,6 +28,7 @@ function parseLessonsForOptions(lessons, numberOfButtons, target, arr = [], opti
          }
       }
    }
+   console.log(lessonsForButton)
    return lessonsForButton;
 }
 

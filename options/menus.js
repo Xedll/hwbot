@@ -13,12 +13,16 @@ const menus = {
       basic: [["Изменить домашнее задание"], ["Добавить домашнее задание"], ["Удалить домашнее задание"], ['Назад']]
    },
    homework: {
+      senjor: {
+         add: [...parseLessonsForOptions(Object.keys(lessons), 1, 'addHomeworkType')],
+         edit: [...parseLessonsForOptions(Object.keys(lessons), 1, 'edit')],
+      },
       middle: {
-         add: [...parseLessonsForOptions(Object.keys(lessons), 1, 'add')],
+         add: [...parseLessonsForOptions(Object.keys(lessons), 1, 'addHomeworkType')],
          edit: [...parseLessonsForOptions(Object.keys(lessons), 1, 'edit')],
       },
       junior: {
-         add: [...parseLessonsForOptions(Object.keys(lessons), 1, 'add', ['Иностранный язык'])],
+         add: [...parseLessonsForOptions(Object.keys(lessons), 1, 'addHomeworkType', ['Иностранный язык'])],
          edit: [...parseLessonsForOptions(Object.keys(lessons), 1, 'edit', ['Иностранный язык'])]
       }
    },

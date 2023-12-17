@@ -5,7 +5,7 @@ module.exports = function setDateForLessonHomework(splitLessons, lessonHomework,
    let deadlineDate = new Date();
    deadlineDate.setDate(deadlineDate.getDate() + NEXT_DAY);
 
-   let currentDay = deadlineDate.getDay();
+   let curretnDay = deadlineDate.getDay();
 
    let typesWeek = Object.keys(splitLessons);
    let currentTypeWeek = typesWeek[currentWeekNumber];
@@ -16,16 +16,23 @@ module.exports = function setDateForLessonHomework(splitLessons, lessonHomework,
    let numberOfLessonsInDay = 0;
    let numberOfDaysOff = NUMBER_OF_DAYS_IN_WEEK - numberOfStudyDays;
 
+
+   if (deadlineDate.getDay() == 0) {
+      deadlineDate.setDate(deadlineDate.getDate() + NEXT_DAY);
+      curretnDay++
+   }
+
    let equalLessonName = false;
    let equalLessonType = false;
    let lessonNotFound = true;
 
    while (lessonNotFound) {
-      numberOfLessonsInDay = splitLessons[currentTypeWeek][currentDay].length;
+
+      numberOfLessonsInDay = splitLessons[currentTypeWeek][curretnDay].length;
 
       for (let j = 0; j < numberOfLessonsInDay; j++) {
-         equalLessonName = (lessonHomework.lesson === splitLessons[currentTypeWeek][currentDay][j].name)
-         equalLessonType = (lessonHomework.type === splitLessons[currentTypeWeek][currentDay][j].type)
+         equalLessonName = (lessonHomework.lesson === splitLessons[currentTypeWeek][curretnDay][j].name)
+         equalLessonType = (lessonHomework.type === splitLessons[currentTypeWeek][curretnDay][j].type)
 
          if (equalLessonName && equalLessonType) {
             lessonNotFound = false;
@@ -36,19 +43,20 @@ module.exports = function setDateForLessonHomework(splitLessons, lessonHomework,
          }
       }
 
-      if (currentDay >= numberOfStudyDays && lessonNotFound) {
+      if (curretnDay >= numberOfStudyDays && lessonNotFound) {
          currentWeekNumber++
          nextTypeWeek = (currentWeekNumber) % numberOfTypesWeek;
 
          currentTypeWeek = typesWeek[nextTypeWeek];
-         currentDay = 1;
+         curretnDay = 1;
 
          deadlineDate.setDate(deadlineDate.getDate() + NEXT_DAY + numberOfDaysOff)
       }
       else if (lessonNotFound) {
-         currentDay++;
+         curretnDay++;
          deadlineDate.setDate(deadlineDate.getDate() + NEXT_DAY);
       }
    }
+
    return lessonHomework;
 }
