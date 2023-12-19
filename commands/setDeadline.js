@@ -31,14 +31,14 @@ module.exports = function setDateForLessonHomework(splitLessons, lessonHomework,
       numberOfLessonsInDay = splitLessons[currentTypeWeek][curretnDay].length;
 
       for (let j = 0; j < numberOfLessonsInDay; j++) {
-         equalLessonName = (lessonHomework.lesson === splitLessons[currentTypeWeek][curretnDay][j].name)
-         equalLessonType = (lessonHomework.type === splitLessons[currentTypeWeek][curretnDay][j].type)
+         equalLessonName = (lessonHomework.homework_lesson === splitLessons[currentTypeWeek][curretnDay][j].name)
+         equalLessonType = (lessonHomework.homework_type === splitLessons[currentTypeWeek][curretnDay][j].type)
 
          if (equalLessonName && equalLessonType) {
             lessonNotFound = false;
 
             deadlineDate = new Date(deadlineDate);
-            lessonHomework.deadline = deadlineDate
+            lessonHomework.homework_deadline = deadlineDate
             break;
          }
       }
