@@ -28,7 +28,6 @@ function parseLessonsForOptions(lessons, numberOfButtons, target, arr = [], opti
          }
       }
    }
-   console.log(lessonsForButton)
    return lessonsForButton;
 }
 
