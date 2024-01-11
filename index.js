@@ -138,11 +138,19 @@ setInterval(async () => { //!!Прок на каждые 5 минут
       if (homeworkForTomorrow) {
 
          for (let chat of Object.keys(chats)) {
-            let tempMessage = ''
-            for (let lesson of Object.keys(homeworkForTomorrow)) {
-               tempMessage += buildHomeworkMessage(homeworkForTomorrow[lesson], lesson, chats[chat])
+            try {
+               let tempMessage = ''
+               for (let lesson of Object.keys(homeworkForTomorrow)) {
+                  tempMessage += buildHomeworkMessage(homeworkForTomorrow[lesson], lesson, chats[chat])
+               }
+               await bot.sendMessage(chat, '#завтра\nДомашка на завтра:\n' + tempMessage, { parse_mode: 'HTML' })
+            } catch (err) {
+               if (err.response.body.description == 'Bad Request: chat not found') {
+                  await db.run('DELETE FROM student WHERE student_id=? ', [chat], (err) => {
+                     if (err) return console.error(err)
+                  })
+               }
             }
-            await bot.sendMessage(chat, '#завтра\nДомашка на завтра:\n' + tempMessage, { parse_mode: 'HTML' })
          }
       }
 
@@ -176,7 +184,7 @@ setInterval(async () => { //!!Прок на каждые 5 минут
 bot.onText(/\/start/, async (message) => {
    await getUsersFromDB()
    let startInfo = 'Данный бот создавался для удобства, ведь в группе для "очень важной" информации уже месиво какое-то из вообще всего.\n\nВы можете поменять группу по иностранному языку, чтобы Вам отображалась домашние задания только Вашей группы (Если она есть в базе данных).\n\nТак же можете просматривать всё домашнее задание, имеющееся в базе данных (Домашние задания хранятся в боте вплоть до 7 дней после дедлайна, после чего удаляются).\n\nПри добавлении нового домашнего задания, всем, кто хоть раз активировал бота, придет сообщение об этом. Его можно отключить нажав на кнопку "Разное" под полем ввода сообщения, после - "Настройка получения уведомлений о добавлении нового дз". Ну или просто замутить бота.\n\nЕжедневно в 14:00-14:05 минут будет приходить напоминание со списком домашнего задания на завтра.\n\nЕсли бот по каким-либо причинам либо ошибкам упал/умер/перестал работать, то через 10 минут после этого он перезапустится (Весьма вероятно, что он вам даст знать об этом)'
-   let adminInfo = 'А теперь, именно <i>Вы</i> обладаете властью над базой данных домашних заданий.\n<i>Вы</i> можете добавлять, изменять (только текст и дедлайн) и удалять домашние задания из бота. Прошу обратить внимание на <i>Вашу</i> группу по английскому, перед добавлением домашнего задания по этой дисциплине, необходимо, чтобы домашнее задание начальной группы было у начальной группы, а не у средней или крутой (Это касается только иностранного языка, пока что).\n\nНемного про иерархию: \nsenior - глав. админ. Вселенская власть.\nmiddle - админ, имеющий доступ ко всем дисциплинам.\njunior - админ, имеющий доступ только к дисциплинам, которые делятся на группы (Н-р, Английский язык)'
+   let adminInfo = 'А теперь, именно <i>Вы</i> обладаете властью над базой данных домашних заданий.\n<i>Вы</i> можете добавлять, изменять (только текст и дедлайн) и удалять домашние задания из бота. Прошу обратить внимание на <i>Вашу</i> группу по английскому, перед добавлением домашнего задания по этой дисциплине, необходимо, чтобы домашнее задание начальной группы было у начальной группы, а не у средней или крутой (Это касается только иностранного языка, пока что).\n\nНемного про иерархию: \nsenior - глав. админ. Вселенская власть.\nmiddle - админ, имеющий доступ ко всем дисциплинам.\njunior - админ, имеющий доступ только к дисциплинам, которые делятся на группы (Н-р, Английский язык)\n\nДедлайн дз автоматически ставится взависимости от расписания, дисциплины и её "типа" (практика, лекция, лабы).\n\nБот не поддерживает отправку файлов и фото и чего-либо ещё, кроме текста. Увы'
    if (!(message.chat.id in chats)) {
 
       db.run('INSERT INTO student(student_id,student_nickname,student_permission,student_english) VALUES (?,?,(SELECT permission_id FROM permission WHERE permission_title = ?),?)', [message.from.id, message.from.username, 'basic', 0])
@@ -392,14 +400,22 @@ bot.on('message', async (message) => {
             })
             for (let chat of Object.keys(chats)) {
                if (+chat != message.chat.id && chats[chat].student_notification && (chats[chat].student_english == taskForAdd.homework_english_group || taskForAdd.homework_english_group == 0 || chats[chat].permission_title == 'senior')) {
-                  await bot.sendMessage(+chat, 'Было добавлено новое домашнее задание:\n' + buildHomeworkMessage([taskForAdd], taskForAdd.homework_lesson, chats[chat]), { parse_mode: 'HTML' })
+                  try {
+                     await bot.sendMessage(+chat, 'Было добавлено новое домашнее задание:\n' + buildHomeworkMessage([taskForAdd], taskForAdd.homework_lesson, chats[chat]), { parse_mode: 'HTML' })
+                  } catch (error) {
+                     if (error.response.body.description == 'Bad Request: chat not found') {
+                        await db.run('DELETE FROM student WHERE student_id=? ', [chat], (err) => {
+                           if (err) return console.error(err)
+                        })
+                     }
+                  }
                }
             }
             resetUserInput()
             resetTempTask()
          }
       } catch (error) {
-         await bot.sendMessage(message.chat.id, 'Дедлайн введен неверно. Проверьте правильность написания дедлайна. Формат: дд.мм.гггг, между данными ставится точка.')
+         await bot.sendMessage(message.chat.id, 'Дедлайн введен неверно. Проверьте правильность написания дедлайна. Формат: дд.мм.гггг, между данными ставится точка. Либо произошла непредвиденная ошибка')
       }
    }
    if (isWaitingForUserAnsw.target == 'editHomework' && (message.text != 'Назад')) {
@@ -653,7 +669,15 @@ bot.on('callback_query', async (message) => {
 
          for (let chat of Object.keys(chats)) {
             if (+chat != chatID && chats[chat].student_notification && (chats[chat].student_english == taskForAdd.homework_english_group || taskForAdd.homework_english_group == 0 || chats[chat].permission_title == 'senior')) {
-               await bot.sendMessage(+chat, 'Было добавлено новое домашнее задание:\n' + buildHomeworkMessage([taskForAdd], taskForAdd.homework_lesson, chats[chat]), { parse_mode: 'HTML' })
+               try {
+                  await bot.sendMessage(+chat, 'Было добавлено новое домашнее задание:\n' + buildHomeworkMessage([taskForAdd], taskForAdd.homework_lesson, chats[chat]), { parse_mode: 'HTML' })
+               } catch (error) {
+                  if (error.response.body.description == 'Bad Request: chat not found') {
+                     await db.run('DELETE FROM student WHERE student_id=? ', [chat], (err) => {
+                        if (err) return console.error(err)
+                     })
+                  }
+               }
             }
          }
 

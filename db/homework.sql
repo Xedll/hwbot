@@ -13,6 +13,8 @@ CREATE TABLE `student` (
   `student_permission` INT NOT NULL,
 
   `student_english` INT NOT NULL,
+  
+  'student_notification' INT NOT NULL,
 
    PRIMARY KEY 'student_id',
 
