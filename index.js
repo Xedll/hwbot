@@ -108,7 +108,7 @@ const getPermissionFromDB = async () => {
 
 
 //ENV
-const BOT_TOKEN = process.env.api_key_bot || '0'
+const BOT_TOKEN = process.env.homeworkBot_token || '0'
 
 const bot = new TelegramBot(BOT_TOKEN, {
    polling: true
