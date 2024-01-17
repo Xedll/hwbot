@@ -3,41 +3,32 @@ const sqlite3 = require('sqlite3').verbose();
 const TelegramBot = require('node-telegram-bot-api')
 require('dotenv').config()
 const { parse } = require('dotenv')
-const express = require('express')
 const fs = require('fs')
 const axios = require('axios').default;
-
-
-const server = express()
-server.listen(3000, () => {
-   console.log('Server is listening on port 3000')
-})
-server.get('/', (req, res) => {
-   res.sendStatus(200)
-})
+const path = require('path');
 
 //Functions
-const buildHomeworkMessage = require('./commands/buildHomeworkMessage.js')
-const parseLessonsForOptions = require('./commands/parseLessonsForOptions.js') //Передаётся список предметов
-const getParsedHomework = require('./commands/getParsedHomework.js')
-const parseLessonsForDays = require('./commands/parseLessonsForDays.js'); //Передаётся "сырая" дата апи вуза
-const getOverdueHomework = require('./commands/getOverdueHomework.js'); //Передаётся "сырая" дата апи вуза
-const getListOfLessons = require('./commands/getListOfLessons.js'); //Передаётся "сырая" дата апи вуза
-const getHomeworkForTomorrow = require('./commands/getHomeworkForTomorrow.js');
+const buildHomeworkMessage = require(path.resolve(__dirname, './commands/buildHomeworkMessage.js'))
+const parseLessonsForOptions = require(path.resolve(__dirname, './commands/parseLessonsForOptions.js')) //Передаётся список предметов
+const getParsedHomework = require(path.resolve(__dirname, './commands/getParsedHomework.js'))
+const parseLessonsForDays = require(path.resolve(__dirname, './commands/parseLessonsForDays.js')); //Передаётся "сырая" дата апи вуза
+const getOverdueHomework = require(path.resolve(__dirname, './commands/getOverdueHomework.js')); //Передаётся "сырая" дата апи вуза
+const getListOfLessons = require(path.resolve(__dirname, './commands/getListOfLessons.js')); //Передаётся "сырая" дата апи вуза
+const getHomeworkForTomorrow = require(path.resolve(__dirname, './commands/getHomeworkForTomorrow.js'));
 
 //Options
-const commands = require('./options/commands.js')
-const menus = require('./options/menus.js')
-const lessons = require('./options/lessons.json');
-const APIData = require('./options/vuzapi.json')
-const setDeadline = require('./commands/setDeadline.js')
-const getEvennessOfWeek = require('./commands/getEvennessOfWeek.js')
+const commands = require(path.resolve(__dirname, './options/commands.js'))
+const menus = require(path.resolve(__dirname, './options/menus.js'))
+const lessons = require(path.resolve(__dirname, './options/lessons.json'))
+const APIData = require(path.resolve(__dirname, './options/vuzapi.json'))
+const setDeadline = require(path.resolve(__dirname, './commands/setDeadline.js'))
+const getEvennessOfWeek = require(path.resolve(__dirname, './commands/getEvennessOfWeek.js'))
 
 let permission = []
 let homework = {}
 let chats = {}
 
-const db = new sqlite3.Database('./db/homework.db', sqlite3.OPEN_READWRITE, (err) => {
+const db = new sqlite3.Database(path.resolve(__dirname, './db/homework.db'), sqlite3.OPEN_READWRITE, (err) => {
    if (err) console.error(err)
 })
 
@@ -181,6 +172,18 @@ setInterval(async () => { //!!Прок на каждые 5 минут
 
 }, 300_000)
 
+bot.onText(/Пользователи/, async (message) => {
+   await getUsersFromDB()
+   if (!(message.chat.id in chats)) return
+   if (chats[message.chat.id].permission_title != 'senior') return
+   await db.run('SELECT * FROM student', async (err, data) => {
+      if (err) return console.error(err)
+      for (let item of data) {
+         await bot.sendMessage(message.chat.id, item)
+      }
+   })
+})
+
 bot.onText(/\/start/, async (message) => {
    await getUsersFromDB()
    let startInfo = 'Данный бот создавался для удобства, ведь в группе для "очень важной" информации уже месиво какое-то из вообще всего.\n\nВы можете поменять группу по иностранному языку, чтобы Вам отображалась домашние задания только Вашей группы (Если она есть в базе данных).\n\nТак же можете просматривать всё домашнее задание, имеющееся в базе данных (Домашние задания хранятся в боте вплоть до 7 дней после дедлайна, после чего удаляются).\n\nПри добавлении нового домашнего задания, всем, кто хоть раз активировал бота, придет сообщение об этом. Его можно отключить нажав на кнопку "Разное" под полем ввода сообщения, после - "Настройка получения уведомлений о добавлении нового дз". Ну или просто замутить бота.\n\nЕжедневно в 14:00-14:05 минут будет приходить напоминание со списком домашнего задания на завтра.\n\nЕсли бот по каким-либо причинам либо ошибкам упал/умер/перестал работать, то через 10 минут после этого он перезапустится (Весьма вероятно, что он вам даст знать об этом)'
@@ -216,6 +219,7 @@ bot.onText(/\/start/, async (message) => {
 })
 
 bot.onText(/Разное/, async (message) => {
+   await getUsersFromDB()
    if (!(message.chat.id in chats)) return
    await bot.sendMessage(message.chat.id, 'Что делаем?', {
       reply_markup: {
@@ -225,6 +229,7 @@ bot.onText(/Разное/, async (message) => {
 
 })
 bot.onText(/Работа с домашним заданием/, async (message) => {
+   await getUsersFromDB()
    if (!(message.chat.id in chats)) return
    await bot.sendMessage(message.chat.id, 'Что делаем?', {
       reply_markup: {
@@ -234,6 +239,7 @@ bot.onText(/Работа с домашним заданием/, async (message) 
 
 })
 bot.onText(/Посмотреть дз/, async (message) => {
+   await getUsersFromDB()
    if (!(message.chat.id in chats)) return
    await bot.sendMessage(message.chat.id, "По чему смотрим дз?", {
       reply_markup: JSON.stringify({
@@ -245,6 +251,7 @@ bot.onText(/Посмотреть дз/, async (message) => {
 
 bot.onText(/Выбрать группу по Английскому Языку/, async (message) => {
 
+   await getUsersFromDB()
    if (!(message.chat.id in chats)) return
    await bot.sendMessage(message.chat.id, 'Для начала введи в какой группе по английскому ты находишься (1 - начальная / 2 - средняя / 3 - сильная):', {
       reply_markup: JSON.stringify({
@@ -258,6 +265,7 @@ bot.onText(/Выбрать группу по Английскому Языку/,
 })
 
 bot.onText(/Назад/, async (message) => {
+   await getUsersFromDB()
    if (!(message.chat.id in chats)) return
    await bot.sendMessage(message.chat.id, 'Что делаем?', {
       reply_markup: {
@@ -268,6 +276,7 @@ bot.onText(/Назад/, async (message) => {
 })
 
 bot.onText(/Профиль/, async (message) => {
+   await getUsersFromDB()
    if (!(message.chat.id in chats)) return
    await getUsersFromDB()
    await bot.sendMessage(message.chat.id, `Ваш профиль:\nВыбранная группа по иностранному языку: ${chats[message.chat.id].student_english}${chats[message.chat.id].permission_title != 'basic' ? '\nВаш уровень прав: ' + chats[message.chat.id].permission_title : ''}`, {
@@ -278,8 +287,8 @@ bot.onText(/Профиль/, async (message) => {
 })
 
 bot.onText(/Настройка получения уведомлений о добавлении нового дз/, async (message) => {
-   if (!(message.chat.id in chats)) return
    await getUsersFromDB()
+   if (!(message.chat.id in chats)) return
    await bot.sendMessage(message.chat.id, `В данный момент получение уведомления о добавлении нового домашнего задания ${chats[message.chat.id].student_notification ? 'включены.' : 'выключены.'}. Что Вы хотите сделать?`, {
       reply_markup: {
          keyboard: [['Выключить'], ['Включить'], ["Назад"]]
@@ -289,9 +298,9 @@ bot.onText(/Настройка получения уведомлений о до
 })
 
 bot.onText(/Добавить домашнее задание/, async (message) => {
+   await getUsersFromDB()
    if (!(message.chat.id in chats)) return
    if (chats[message.chat.id].permission_title == 'basic') return
-   await getUsersFromDB()
    await bot.sendMessage(message.chat.id, 'По какой дисциплине добавляем дз?', {
       reply_markup: {
          inline_keyboard: menus.homework[chats[message.chat.id].permission_title].add
@@ -301,6 +310,7 @@ bot.onText(/Добавить домашнее задание/, async (message) =
 })
 
 bot.onText(/Изменить домашнее задание/, async (message) => {
+   await getUsersFromDB()
    if (!(message.chat.id in chats)) return
    if (chats[message.chat.id].permission_title == 'basic') return
    await bot.sendMessage(message.chat.id, 'Введи айди дз, которое Вы хотите изменить.')
@@ -308,6 +318,7 @@ bot.onText(/Изменить домашнее задание/, async (message) =
 })
 
 bot.onText(/Удалить домашнее задание/, async (message) => {
+   await getUsersFromDB()
    if (!(message.chat.id in chats)) return
    if (chats[message.chat.id].permission_title == 'basic') return
    await bot.sendMessage(message.chat.id, 'Введи айди дз, которое Вы хотите удалить.')
@@ -315,6 +326,7 @@ bot.onText(/Удалить домашнее задание/, async (message) => 
 })
 
 bot.onText(/Действия с админами/, async (message) => {
+   await getUsersFromDB()
    if (!(message.chat.id in chats)) return
    if (chats[message.chat.id].permission_title != 'senior') return
 
@@ -340,6 +352,7 @@ bot.onText(/Изменить права юзеру/, async (message) => {
 })
 
 bot.on('message', async (message) => {
+   await getUsersFromDB()
    if (!(message.chat.id in chats) && (message.text != '/start')) {
       await bot.sendMessage(message.chat.id, 'Пожалуйста, пропишите /start для началы пользования ботом.', {
          reply_markup: {
@@ -513,6 +526,7 @@ bot.on('message', async (message) => {
 })
 
 bot.on('callback_query', async (message) => {
+   await getUsersFromDB()
    let chatID = message.message.chat.id
 
    if (!(chatID in chats)) {
