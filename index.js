@@ -176,7 +176,7 @@ bot.onText(/Пользователи/, async (message) => {
    await getUsersFromDB()
    if (!(message.chat.id in chats)) return
    if (chats[message.chat.id].permission_title != 'senior') return
-   await db.run('SELECT * FROM student', async (err, data) => {
+   await db.all('SELECT * FROM student', [], async (err, data) => {
       if (err) return console.error(err)
       for (let item of data) {
          await bot.sendMessage(message.chat.id, item)
