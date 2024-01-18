@@ -178,9 +178,12 @@ bot.onText(/Пользователи/, async (message) => {
    if (chats[message.chat.id].permission_title != 'senior') return
    await db.all('SELECT * FROM student', [], async (err, data) => {
       if (err) return console.error(err)
+      let temp = ''
       for (let item of data) {
-         await bot.sendMessage(message.chat.id, item)
+         temp += `Nickname: ${item.student_nickname}\nID: ${item.student_id}\nPermissions: ${chats[item.student_id].permission_title}`
+         temp += '\n=================\n'
       }
+      await bot.sendMessage(message.chat.id, temp)
    })
 })
 
@@ -777,7 +780,7 @@ bot.on('callback_query', async (message) => {
                keyboard: chats[chatID].permission == 'basic' ? menus.basic : menus.extended
             }
          })
-         await bot.sendMessage(data.user, `Ваши права доступа были изменены до уровня <strong>${chats[data.user].permission_title}</strong>`, { parse_mode: 'HTML' })
+         await bot.sendMessage(data.user, `Ваши права доступа были изменены до уровня <strong>${data.permission}</strong>`, { parse_mode: 'HTML' })
          await getUsersFromDB()
          bot.answerCallbackQuery(message.id)
       }
