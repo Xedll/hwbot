@@ -172,6 +172,8 @@ setInterval(async () => { //!!Прок на каждые 5 минут
 
 }, 300_000)
 
+
+
 bot.onText(/Пользователи/, async (message) => {
    await getUsersFromDB()
    if (!(message.chat.id in chats)) return
@@ -304,6 +306,7 @@ bot.onText(/Добавить домашнее задание/, async (message) =
    await getUsersFromDB()
    if (!(message.chat.id in chats)) return
    if (chats[message.chat.id].permission_title == 'basic') return
+   console.log(chats[message.chat.id].permission_title)
    await bot.sendMessage(message.chat.id, 'По какой дисциплине добавляем дз?', {
       reply_markup: {
          inline_keyboard: menus().homework[chats[message.chat.id].permission_title].add
@@ -492,7 +495,7 @@ bot.on('message', async (message) => {
 
       if (isHomeworkHaveFound) {
          await db.run('DELETE FROM homework WHERE homework_id = ?', [message.text], (err) => {
-            iif(err) { console.log('495 line'); return console.error(err) }
+            if (err) { console.log('495 line'); return console.error(err) }
          })
          await bot.sendMessage(message.chat.id, 'Дз успешно удалено.', {
             reply_markup: {
