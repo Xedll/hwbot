@@ -138,7 +138,7 @@ setInterval(async () => { //!!Прок на каждые 5 минут
             } catch (err) {
                if (err.response.body.description == 'Bad Request: chat not found') {
                   await db.run('DELETE FROM student WHERE student_id=? ', [chat], (err) => {
-                     if (err) return console.error(err)
+                     if (err) { console.log('141 line'); return console.error(err) }
                   })
                }
             }
@@ -151,7 +151,7 @@ setInterval(async () => { //!!Прок на каждые 5 минут
          for (let overdueLesson of Object.keys(overdueHomework)) {
             for (let overdueTask of overdueHomework[overdueLesson]) {
                await db.run('DELETE FROM homework WHERE homework_id=? ', [overdueTask.homework_id], (err) => {
-                  if (err) return console.error(err)
+                  if (err) { console.log('154 line'); return console.error(err) }
                })
             }
          }
@@ -193,12 +193,12 @@ bot.onText(/\/start/, async (message) => {
    let adminInfo = 'А теперь, именно <i>Вы</i> обладаете властью над базой данных домашних заданий.\n<i>Вы</i> можете добавлять, изменять (только текст и дедлайн) и удалять домашние задания из бота. Прошу обратить внимание на <i>Вашу</i> группу по английскому, перед добавлением домашнего задания по этой дисциплине, необходимо, чтобы домашнее задание начальной группы было у начальной группы, а не у средней или крутой (Это касается только иностранного языка, пока что).\n\nНемного про иерархию: \nsenior - глав. админ. Вселенская власть.\nmiddle - админ, имеющий доступ ко всем дисциплинам.\njunior - админ, имеющий доступ только к дисциплинам, которые делятся на группы (Н-р, Английский язык)\n\nДедлайн дз автоматически ставится взависимости от расписания, дисциплины и её "типа" (практика, лекция, лабы).\n\nБот не поддерживает отправку файлов и фото и чего-либо ещё, кроме текста. Увы'
    if (!(message.chat.id in chats)) {
 
-      db.run('INSERT INTO student(student_id,student_nickname,student_permission,student_english) VALUES (?,?,(SELECT permission_id FROM permission WHERE permission_title = ?),?)', [message.from.id, message.from.username, 'basic', 0])
+      await db.run('INSERT INTO student(student_id,student_nickname,student_permission,student_english) VALUES (?,?,(SELECT permission_id FROM permission WHERE permission_title = ?),?)', [message.from.id, message.from.username, 'basic', 0], (err) => { if (err) { console.log('196 line'); return console.error(err) } })
 
       await bot.sendMessage(message.chat.id, startInfo, {
          parse_mode: 'HTML',
          reply_markup: {
-            keyboard: menus.basic
+            keyboard: menus().basic
          }
       })
 
@@ -207,14 +207,14 @@ bot.onText(/\/start/, async (message) => {
          await bot.sendMessage(message.chat.id, startInfo + '\n\n-------\n\n' + adminInfo, {
             parse_mode: 'HTML',
             reply_markup: {
-               keyboard: chats[message.chat.id].permission == 'basic' ? menus.basic : menus.extended
+               keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
             }
          })
       } else {
          await bot.sendMessage(message.chat.id, startInfo, {
             parse_mode: 'HTML',
             reply_markup: {
-               keyboard: menus.basic
+               keyboard: menus().basic
             }
          })
       }
@@ -226,7 +226,7 @@ bot.onText(/Разное/, async (message) => {
    if (!(message.chat.id in chats)) return
    await bot.sendMessage(message.chat.id, 'Что делаем?', {
       reply_markup: {
-         keyboard: menus['разное'][chats[message.chat.id].permission_title]
+         keyboard: menus()['разное'][chats[message.chat.id].permission_title]
       }
    })
 
@@ -236,7 +236,7 @@ bot.onText(/Работа с домашним заданием/, async (message) 
    if (!(message.chat.id in chats)) return
    await bot.sendMessage(message.chat.id, 'Что делаем?', {
       reply_markup: {
-         keyboard: menus['Работа с домашним заданием'].basic,
+         keyboard: menus()['Работа с домашним заданием'].basic,
       }
    })
 
@@ -272,7 +272,7 @@ bot.onText(/Назад/, async (message) => {
    if (!(message.chat.id in chats)) return
    await bot.sendMessage(message.chat.id, 'Что делаем?', {
       reply_markup: {
-         keyboard: chats[message.chat.id].permission == 'basic' ? menus.basic : menus.extended
+         keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
       }
    })
    resetUserInput()
@@ -284,7 +284,7 @@ bot.onText(/Профиль/, async (message) => {
    await getUsersFromDB()
    await bot.sendMessage(message.chat.id, `Ваш профиль:\nВыбранная группа по иностранному языку: ${chats[message.chat.id].student_english}${chats[message.chat.id].permission_title != 'basic' ? '\nВаш уровень прав: ' + chats[message.chat.id].permission_title : ''}`, {
       reply_markup: {
-         keyboard: menus.profile
+         keyboard: menus().profile
       }
    })
 })
@@ -306,7 +306,7 @@ bot.onText(/Добавить домашнее задание/, async (message) =
    if (chats[message.chat.id].permission_title == 'basic') return
    await bot.sendMessage(message.chat.id, 'По какой дисциплине добавляем дз?', {
       reply_markup: {
-         inline_keyboard: menus.homework[chats[message.chat.id].permission_title].add
+         inline_keyboard: menus().homework[chats[message.chat.id].permission_title].add
       }
    })
 
@@ -335,7 +335,7 @@ bot.onText(/Действия с админами/, async (message) => {
 
    await bot.sendMessage(message.chat.id, 'Что делаем?', {
       reply_markup: {
-         keyboard: [...menus[message.text], ['Назад']]
+         keyboard: [...menus()[message.text], ['Назад']]
       }
    })
 
@@ -375,12 +375,12 @@ bot.on('message', async (message) => {
       if (messageData == null) return
       if (chats[message.chat.id].student_notification != messageData) {
          await db.run('UPDATE student SET student_notification=? WHERE student_id=?', [messageData, message.chat.id], (err) => {
-            if (err) return console.error(err)
+            if (err) { console.log('378 line'); return console.error(err) }
          })
       }
       await bot.sendMessage(message.chat.id, 'Настройка уведомлений прошла успешно.', {
          reply_markup: {
-            keyboard: chats[message.chat.id].permission == 'basic' ? menus.basic : menus.extended
+            keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
          }
       })
       resetUserInput()
@@ -407,11 +407,11 @@ bot.on('message', async (message) => {
             await getUsersFromDB()
             let taskForAdd = new Task(tempTask.text, tempTask.lesson, tempTask.deadline, message.chat.id, tempTask.type, tempTask.lesson == 'Иностранный язык' ? chats[message.chat.id].student_english : 0)
             db.run('INSERT INTO homework(homework_text,homework_lesson,homework_deadline,homework_creator,homework_type,homework_english_group) VALUES (?,?,?,?,?,?)', [taskForAdd.homework_text, taskForAdd.homework_lesson, taskForAdd.homework_deadline, taskForAdd.homework_creator, taskForAdd.homework_type, taskForAdd.homework_english_group], (err) => {
-               if (err) return console.error(err)
+               if (err) { console.log('410 line'); return console.error(err) }
             })
             await bot.sendMessage(message.chat.id, 'Домашка добавлена.', {
                reply_markup: {
-                  keyboard: chats[message.chat.id].permission == 'basic' ? menus.basic : menus.extended
+                  keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
                }
             })
             for (let chat of Object.keys(chats)) {
@@ -421,7 +421,7 @@ bot.on('message', async (message) => {
                   } catch (error) {
                      if (error.response.body.description == 'Bad Request: chat not found') {
                         await db.run('DELETE FROM student WHERE student_id=? ', [chat], (err) => {
-                           if (err) return console.error(err)
+                           if (err) { console.log('424 line'); return console.error(err) }
                         })
                      }
                   }
@@ -444,11 +444,11 @@ bot.on('message', async (message) => {
    if (isWaitingForUserAnsw.target == 'rewriteNewText' && (message.text != 'Назад')) {
       isWaitingForUserAnsw.taskForEdit.homework_text = message.text
       db.run('UPDATE homework SET homework_text=? WHERE homework_id=?', [message.text, isWaitingForUserAnsw.taskForEdit.homework_id], (err) => {
-         if (err) return console.error(err)
+         if (err) { console.log('447 line'); return console.error(err) }
       })
       await bot.sendMessage(message.chat.id, 'Дз успешно изменено.', {
          reply_markup: {
-            keyboard: chats[message.chat.id].permission == 'basic' ? menus.basic : menus.extended
+            keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
          }
       })
       resetUserInput()
@@ -461,12 +461,12 @@ bot.on('message', async (message) => {
             await bot.sendMessage(message.chat.id, 'Ввод уже прошедшего времени невозможен. Пожалуйста, введите дедлайн корректно.')
          } else {
             isWaitingForUserAnsw.taskForEdit.homework_deadline = new Date((+tempDeadline[1] - 1) * 86_400_000 + (+tempDeadline[2] - 1) * 2_629_746_000 + (+tempDeadline[3] - 1970) * 31_556_952_000)
-            db.run('UPDATE homework SET homework_deadline=? WHERE homework_id=?', [isWaitingForUserAnsw.taskForEdit.homework_deadline, isWaitingForUserAnsw.taskForEdit.homework_id], (err) => {
-               if (err) return console.error(err)
+            await db.run('UPDATE homework SET homework_deadline=? WHERE homework_id=?', [isWaitingForUserAnsw.taskForEdit.homework_deadline, isWaitingForUserAnsw.taskForEdit.homework_id], (err) => {
+               if (err) { console.log('465 line'); return console.error(err) }
             })
             await bot.sendMessage(message.chat.id, 'Дз успешно изменено.', {
                reply_markup: {
-                  keyboard: chats[message.chat.id].permission == 'basic' ? menus.basic : menus.extended
+                  keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
                }
             })
             resetUserInput()
@@ -486,17 +486,17 @@ bot.on('message', async (message) => {
       let isHomeworkHaveFound = false
       homeworkLessons.forEach(lesson => {
          for (let i = 0; i < homework[lesson].length; i++) {
-            if (homework[lesson][i].homework_id == message.text && (homework[lesson][i].homework_creator == message.chat.id || chats[message.chat.id].permission_title == 'senior') && lesson in menus.permissions[chats[message.chat.id].permission_title]) return isHomeworkHaveFound = true
+            if (homework[lesson][i].homework_id == message.text && (homework[lesson][i].homework_creator == message.chat.id || chats[message.chat.id].permission_title == 'senior') && lesson in menus().permissions[chats[message.chat.id].permission_title]) return isHomeworkHaveFound = true
          }
       })
 
       if (isHomeworkHaveFound) {
          await db.run('DELETE FROM homework WHERE homework_id = ?', [message.text], (err) => {
-            if (err) return console.error(err.message)
+            iif(err) { console.log('495 line'); return console.error(err) }
          })
          await bot.sendMessage(message.chat.id, 'Дз успешно удалено.', {
             reply_markup: {
-               keyboard: chats[message.chat.id].permission == 'basic' ? menus.basic : menus.extended
+               keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
             }
          })
          await getHomeworkFromDB()
@@ -505,7 +505,7 @@ bot.on('message', async (message) => {
       } else {
          await bot.sendMessage(message.chat.id, 'Дз не было найдено либо у Вас нет к нему доступа.', {
             reply_markup: {
-               keyboard: chats[message.chat.id].permission == 'basic' ? menus.basic : menus.extended
+               keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
             }
          })
          resetUserInput()
@@ -580,7 +580,7 @@ bot.on('callback_query', async (message) => {
    }
    if (data.target == 'english') {
       db.run('UPDATE student SET student_english = ? WHERE student_id = ?', [data.group, data.chatID], (err) => {
-         if (err) return console.error(err.message)
+         if (err) { console.log('583 line'); return console.error(err) }
       })
       chats[data.chatID] = { ...chats[data.chatID], english: data.group }
       await bot.sendMessage(data.chatID, "Отлично! Приятного пользования ботом.", {
@@ -599,11 +599,11 @@ bot.on('callback_query', async (message) => {
          bot.answerCallbackQuery(message.id)
          return await bot.sendMessage(chatID, 'Домашнее задание заполнено некорректно. Начните сначала.')
       }
-      if (!(tempTask.lesson in menus.permissions[chats[chatID].permission_title])) {
+      if (!(tempTask.lesson in menus().permissions[chats[chatID].permission_title])) {
          bot.answerCallbackQuery(message.id)
          return await bot.sendMessage(chatID, 'У Вас нет доступа к добавлению дз по этой дисциплине.', {
             reply_markup: {
-               keyboard: chats[message.chat.id].permission == 'basic' ? menus.basic : menus.extended
+               keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
             }
          })
       }
@@ -631,11 +631,11 @@ bot.on('callback_query', async (message) => {
          tempTask.lesson = Object.keys(lessons)[lessonID]
       }
 
-      if (!(tempTask.lesson in menus.permissions[chats[chatID].permission_title])) {
+      if (!(tempTask.lesson in menus().permissions[chats[chatID].permission_title])) {
          bot.answerCallbackQuery(message.id)
          return await bot.sendMessage(chatID, 'У Вас нет доступа к добавлению дз по этой дисциплине.', {
             reply_markup: {
-               keyboard: chats[chatID].permission == 'basic' ? menus.basic : menus.extended
+               keyboard: chats[chatID].permission == 'basic' ? menus().basic : menus().extended
             }
          })
       }
@@ -655,11 +655,11 @@ bot.on('callback_query', async (message) => {
          return await bot.sendMessage(chatID, 'Домашнее задание заполнено некорректно. Начните сначала.')
       }
 
-      if (!(tempTask.lesson in menus.permissions[chats[chatID].permission_title])) {
+      if (!(tempTask.lesson in menus().permissions[chats[chatID].permission_title])) {
          bot.answerCallbackQuery(message.id)
          return await bot.sendMessage(chatID, 'У Вас нет доступа к добавлению дз по этой дисциплине.', {
             reply_markup: {
-               keyboard: chats[chatID].permission == 'basic' ? menus.basic : menus.extended
+               keyboard: chats[chatID].permission == 'basic' ? menus().basic : menus().extended
             }
          })
 
@@ -675,12 +675,12 @@ bot.on('callback_query', async (message) => {
          setDeadline(parseLessonsForDays(APIData), taskForAdd, getEvennessOfWeek())
 
          await db.run('INSERT INTO homework(homework_text,homework_lesson,homework_deadline,homework_creator,homework_type,homework_english_group) VALUES (?,?,?,?,?,?)', [taskForAdd.homework_text, taskForAdd.homework_lesson, taskForAdd.homework_deadline, taskForAdd.homework_creator, taskForAdd.homework_type, taskForAdd.homework_english_group], (err) => {
-            if (err) return console.error(err)
+            if (err) { console.log('678 line'); return console.error(err) }
          })
 
          await bot.sendMessage(chatID, 'Домашка добавлена.', {
             reply_markup: {
-               keyboard: menus[chats[chatID].permission_title]
+               keyboard: menus()[chats[chatID].permission_title]
             }
          })
 
@@ -691,7 +691,7 @@ bot.on('callback_query', async (message) => {
                } catch (error) {
                   if (error.response.body.description == 'Bad Request: chat not found') {
                      await db.run('DELETE FROM student WHERE student_id=? ', [chat], (err) => {
-                        if (err) return console.error(err)
+                        if (err) { console.log('694 line'); return console.error(err) }
                      })
                   }
                }
@@ -713,7 +713,7 @@ bot.on('callback_query', async (message) => {
       for (let key of Object.keys(homework)) {
          homework[key].forEach(async item => {
             if (item.homework_id == data.taskID) {
-               if (item.homework_lesson in menus.permissions[chats[chatID].permission_title] && (item.homework_creator == chatID || chats[chatID].permission_id == 4)) {
+               if (item.homework_lesson in menus().permissions[chats[chatID].permission_title] && (item.homework_creator == chatID || chats[chatID].permission_id == 4)) {
                   taskForEdit = item
                }
             }
@@ -722,7 +722,7 @@ bot.on('callback_query', async (message) => {
       if (taskForEdit == null) {
          await bot.sendMessage(chatID, 'Нет доступа к этому дз.', {
             reply_markup: {
-               keyboard: menus[chats[chatID]]
+               keyboard: menus()[chats[chatID]]
             }
          })
          bot.answerCallbackQuery(message.id)
@@ -741,7 +741,7 @@ bot.on('callback_query', async (message) => {
       for (let key of Object.keys(homework)) {
          homework[key].forEach(async item => {
             if (item.homework_id == data.taskID) {
-               if (item.homework_lesson in menus.permissions[chats[chatID].permission_title] && (item.homework_creator == chatID || chats[chatID].permission_id == 4)) {
+               if (item.homework_lesson in menus().permissions[chats[chatID].permission_title] && (item.homework_creator == chatID || chats[chatID].permission_id == 4)) {
                   taskForEdit = item
                }
             }
@@ -750,7 +750,7 @@ bot.on('callback_query', async (message) => {
       if (taskForEdit == null) {
          await bot.sendMessage(chatID, 'Нет доступа к этому дз.', {
             reply_markup: {
-               keyboard: menus[chats[chatID]]
+               keyboard: menus()[chats[chatID]]
             }
          })
          bot.answerCallbackQuery(message.id)
@@ -767,17 +767,17 @@ bot.on('callback_query', async (message) => {
       if (data.user == '1386879737') {
          await bot.sendMessage(chatID, 'Вы не можете изменить права данному пользователю.', {
             reply_markup: {
-               keyboard: chats[chatID].permission == 'basic' ? menus.basic : menus.extended
+               keyboard: chats[chatID].permission == 'basic' ? menus().basic : menus().extended
             }
          })
          bot.answerCallbackQuery(message.id)
       } else {
          await db.run('UPDATE student SET student_permission = ? WHERE student_id = ?', [data.permission, data.user], (err) => {
-            if (err) return console.error(err.message)
+            if (err) { console.log('776 line'); return console.error(err) }
          })
          await bot.sendMessage(chatID, 'Права пользователя обновлены', {
             reply_markup: {
-               keyboard: chats[chatID].permission == 'basic' ? menus.basic : menus.extended
+               keyboard: chats[chatID].permission == 'basic' ? menus().basic : menus().extended
             }
          })
          await bot.sendMessage(data.user, `Ваши права доступа были изменены до уровня <strong>${data.permission}</strong>`, { parse_mode: 'HTML' })
