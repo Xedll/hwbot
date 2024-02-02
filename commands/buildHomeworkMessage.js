@@ -12,8 +12,10 @@ module.exports = function CastToOneMassage(homework, lesson, chatEntity) {
       finalHomeworkText += separator + "\n";
    }
    if (finalHomeworkText) {
-      finalHomeworkText = `Дз по дисциплине "<u>${lesson}</u>":\n${separator}\n` + finalHomeworkText;
+      finalHomeworkText = `Дз по дисциплине "<u>${lesson}</u>":\n${separator}\n` + finalHomeworkText + '\n';
+      return finalHomeworkText;
+   } else {
+      return ``;
    }
-   return finalHomeworkText;
 }
 

@@ -191,8 +191,8 @@ bot.onText(/Пользователи/, async (message) => {
 
 bot.onText(/\/start/, async (message) => {
    await getUsersFromDB()
-   let startInfo = 'Данный бот создавался для удобства, ведь в группе для "очень важной" информации уже месиво какое-то из вообще всего.\n\nВы можете поменять группу по иностранному языку, чтобы Вам отображалась домашние задания только Вашей группы (Если она есть в базе данных).\n\nТак же можете просматривать всё домашнее задание, имеющееся в базе данных (Домашние задания хранятся в боте вплоть до 7 дней после дедлайна, после чего удаляются).\n\nПри добавлении нового домашнего задания, всем, кто хоть раз активировал бота, придет сообщение об этом. Его можно отключить нажав на кнопку "Разное" под полем ввода сообщения, после - "Настройка получения уведомлений о добавлении нового дз". Ну или просто замутить бота.\n\nЕжедневно в 14:00-14:05 минут будет приходить напоминание со списком домашнего задания на завтра.\n\nЕсли бот по каким-либо причинам либо ошибкам упал/умер/перестал работать, то увы (я обязательно узнаю об этом...)'
-   let adminInfo = 'А теперь, именно <i>Вы</i> обладаете властью над базой данных домашних заданий.\n<i>Вы</i> можете добавлять, изменять (только текст и дедлайн) и удалять домашние задания из бота. Прошу обратить внимание на <i>Вашу</i> группу по английскому, перед добавлением домашнего задания по этой дисциплине, необходимо, чтобы домашнее задание начальной группы было у начальной группы, а не у средней или крутой (Это касается только иностранного языка, пока что).\n\nНемного про иерархию: \nsenior - глав. админ. Вселенская власть.\nmiddle - админ, имеющий доступ ко всем дисциплинам.\njunior - админ, имеющий доступ только к дисциплинам, которые делятся на группы (Н-р, Английский язык)\n\nДедлайн дз автоматически ставится взависимости от расписания, дисциплины и её "типа" (практика, лекция, лабы).\n\nБот не поддерживает отправку файлов и фото и чего-либо ещё, кроме текста. Увы'
+   let startInfo = 'Данный бот создавался для удобства, ведь в группе для "очень важной" информации уже месиво какое-то из вообще всего.\n\nВы можете поменять группу по иностранному языку, чтобы Вам отображалась домашние задания только Вашей группы (Если она есть в базе данных).\n\nТак же можете просматривать всё домашнее задание, имеющееся в базе данных (Домашние задания хранятся в боте вплоть до 7 дней после дедлайна, после чего удаляются).\n\nПри добавлении нового домашнего задания, всем, кто хоть раз активировал бота, придет сообщение об этом. Его можно отключить нажав на кнопку "Разное" под полем ввода сообщения, после - "Настройка получения уведомлений о добавлении нового дз". Ну или просто замутить бота.\n\nЕжедневно в 14:00-14:05 минут будет приходить напоминание со списком домашнего задания на завтра.\n\nЕсли бот по каким-либо причинам либо ошибкам упал/умер/перестал работать, то увы (я обязательно узнаю об этом...)\nА ещё не забудьте выбрать группу по английскому (Профиль -> Выбрать группу по англу), чтобы вам приходила ваша домашка, если она есть.'
+   let adminInfo = 'А теперь, именно <i>Вы</i> обладаете властью над базой данных домашних заданий.\n<i>Вы</i> можете добавлять, изменять (только текст и дедлайн) и удалять домашние задания из бота. Прошу обратить внимание на <i>Вашу</i> группу по английскому, перед добавлением домашнего задания по этой дисциплине, необходимо, чтобы домашнее задание начальной группы было у начальной группы, а не у средней или крутой (Это касается только иностранного языка, пока что).\n\nНемного про иерархию: \ 4 - глав. админ. Вселенская власть.\ 3 - админ, имеющий доступ ко всем дисциплинам.\ 2 - админ, имеющий доступ только к дисциплинам, которые делятся на группы (Н-р, Английский язык)\n\nДедлайн дз автоматически ставится взависимости от расписания, дисциплины и её "типа" (практика, лекция, лабы).\n\nБот не поддерживает отправку файлов и фото и чего-либо ещё, кроме текста. Увы'
    if (!(message.chat.id in chats)) {
 
       await db.run('INSERT INTO student(student_id,student_nickname,student_permission,student_english) VALUES (?,?,(SELECT permission_id FROM permission WHERE permission_title = ?),?)', [message.from.id, message.from.username, 'basic', 0], (err) => { if (err) { console.log('196 line'); return console.error(err) } })
@@ -209,7 +209,7 @@ bot.onText(/\/start/, async (message) => {
          await bot.sendMessage(message.chat.id, startInfo + '\n\n-------\n\n' + adminInfo, {
             parse_mode: 'HTML',
             reply_markup: {
-               keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
+               keyboard: chats[message.chat.id].permission_title == 'basic' ? menus().basic : menus().extended
             }
          })
       } else {
@@ -274,7 +274,7 @@ bot.onText(/Назад/, async (message) => {
    if (!(message.chat.id in chats)) return
    await bot.sendMessage(message.chat.id, 'Что делаем?', {
       reply_markup: {
-         keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
+         keyboard: chats[message.chat.id].permission_title == 'basic' ? menus().basic : menus().extended
       }
    })
    resetUserInput()
@@ -299,7 +299,7 @@ bot.onText(/Настройка получения уведомлений о до
          keyboard: [['Выключить'], ['Включить'], ["Назад"]]
       }
    })
-   isWaitingForUserAnsw = { target: 'editNotification', isWaiting: true }
+   isWaitingForUserAnsw = { target: 'editNotification', isWaiting: true, creator: message.chat.id }
 })
 
 bot.onText(/Добавить домашнее задание/, async (message) => {
@@ -320,7 +320,7 @@ bot.onText(/Изменить домашнее задание/, async (message) =
    if (!(message.chat.id in chats)) return
    if (chats[message.chat.id].permission_title == 'basic') return
    await bot.sendMessage(message.chat.id, 'Введи айди дз, которое Вы хотите изменить.')
-   isWaitingForUserAnsw = { target: 'editHomework', isWaiting: true }
+   isWaitingForUserAnsw = { target: 'editHomework', isWaiting: true, creator: message.chat.id }
 })
 
 bot.onText(/Удалить домашнее задание/, async (message) => {
@@ -328,7 +328,7 @@ bot.onText(/Удалить домашнее задание/, async (message) => 
    if (!(message.chat.id in chats)) return
    if (chats[message.chat.id].permission_title == 'basic') return
    await bot.sendMessage(message.chat.id, 'Введи айди дз, которое Вы хотите удалить.')
-   isWaitingForUserAnsw = { target: 'deleteHomework', isWaiting: true }
+   isWaitingForUserAnsw = { target: 'deleteHomework', isWaiting: true, creator: message.chat.id }
 })
 
 bot.onText(/Действия с админами/, async (message) => {
@@ -354,7 +354,7 @@ bot.onText(/Изменить права юзеру/, async (message) => {
       userList += `ID: <code>${chats[user].student_id}</code>. Username: @${chats[user].student_nickname}. Premissions: ${chats[user].permission_title}.\n`
    }
    await bot.sendMessage(message.chat.id, `Введите айди пользователя, которому будем менять права.\n${userList}`, { parse_mode: 'HTML' })
-   isWaitingForUserAnsw = { target: 'editPermission', isWaiting: true, data: message.text }
+   isWaitingForUserAnsw = { target: 'editPermission', isWaiting: true, data: message.text, creator: message.chat.id }
 })
 
 bot.on('message', async (message) => {
@@ -368,7 +368,7 @@ bot.on('message', async (message) => {
       return
    }
    if (commands.includes(message.text)) return
-   if (isWaitingForUserAnsw.target == 'editNotification' && (message.text != 'Назад')) {
+   if (isWaitingForUserAnsw.target == 'editNotification' && (message.text != 'Назад') && isWaitingForUserAnsw.creator == message.chat.id) {
       let messageData = null
       if (message.text == 'Выключить') {
          messageData = 0
@@ -383,13 +383,13 @@ bot.on('message', async (message) => {
       }
       await bot.sendMessage(message.chat.id, 'Настройка уведомлений прошла успешно.', {
          reply_markup: {
-            keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
+            keyboard: chats[message.chat.id].permission_title == 'basic' ? menus().basic : menus().extended
          }
       })
       resetUserInput()
       await getUsersFromDB()
    }
-   if (isWaitingForUserAnsw.target == 'addHomeworkText' && (message.text != 'Назад')) {
+   if (isWaitingForUserAnsw.target == 'addHomeworkText' && (message.text != 'Назад') && isWaitingForUserAnsw.creator == message.chat.id) {
       tempTask.text = message.text
       await bot.sendMessage(message.chat.id, 'Добавим дедлайн?', {
          reply_markup: {
@@ -397,10 +397,10 @@ bot.on('message', async (message) => {
          }
       })
    }
-   if (isWaitingForUserAnsw.target == 'addHomeworkType' && (message.text != 'Назад')) {
+   if (isWaitingForUserAnsw.target == 'addHomeworkType' && (message.text != 'Назад') && isWaitingForUserAnsw.creator == message.chat.id) {
       await bot.sendMessage(message.chat.id, 'Пожалуйста, выберите "тип" дисциплины, по которой Вы добавляете домашнее задание.')
    }
-   if (isWaitingForUserAnsw.target == 'addDeadline' && (message.text != 'Назад')) {
+   if (isWaitingForUserAnsw.target == 'addDeadline' && (message.text != 'Назад') && isWaitingForUserAnsw.creator == message.chat.id) {
       try {
          let tempDeadline = message.text.match(/(\d{2})\.(\d{2})\.(\d{4})/)
          tempTask.deadline = new Date((+tempDeadline[1] - 1) * 86_400_000 + (+tempDeadline[2] - 1) * 2_629_746_000 + (+tempDeadline[3] - 1970) * 31_556_952_000)
@@ -414,7 +414,7 @@ bot.on('message', async (message) => {
             })
             await bot.sendMessage(message.chat.id, 'Домашка добавлена.', {
                reply_markup: {
-                  keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
+                  keyboard: chats[message.chat.id].permission_title == 'basic' ? menus().basic : menus().extended
                }
             })
             for (let chat of Object.keys(chats)) {
@@ -437,27 +437,27 @@ bot.on('message', async (message) => {
          await bot.sendMessage(message.chat.id, 'Дедлайн введен неверно. Проверьте правильность написания дедлайна. Формат: дд.мм.гггг, между данными ставится точка. Либо произошла непредвиденная ошибка')
       }
    }
-   if (isWaitingForUserAnsw.target == 'editHomework' && (message.text != 'Назад')) {
+   if (isWaitingForUserAnsw.target == 'editHomework' && (message.text != 'Назад') && isWaitingForUserAnsw.creator == message.chat.id) {
       await bot.sendMessage(message.chat.id, 'Что меняем у дз?', {
          reply_markup: {
             inline_keyboard: [[{ text: 'Текст', callback_data: JSON.stringify({ target: 'editTextForHomework', taskID: message.text }) }], [{ text: 'Дедлайн', callback_data: JSON.stringify({ target: 'editDeadlineForHomework', taskID: message.text }) }]]
          }
       })
    }
-   if (isWaitingForUserAnsw.target == 'rewriteNewText' && (message.text != 'Назад')) {
+   if (isWaitingForUserAnsw.target == 'rewriteNewText' && (message.text != 'Назад') && isWaitingForUserAnsw.creator == message.chat.id) {
       isWaitingForUserAnsw.taskForEdit.homework_text = message.text
       db.run('UPDATE homework SET homework_text=? WHERE homework_id=?', [message.text, isWaitingForUserAnsw.taskForEdit.homework_id], (err) => {
          if (err) { console.log('447 line'); return console.error(err) }
       })
       await bot.sendMessage(message.chat.id, 'Дз успешно изменено.', {
          reply_markup: {
-            keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
+            keyboard: chats[message.chat.id].permission_title == 'basic' ? menus().basic : menus().extended
          }
       })
       resetUserInput()
       await getHomeworkFromDB()
    }
-   if (isWaitingForUserAnsw.target == 'rewriteNewDeadline' && (message.text != 'Назад')) {
+   if (isWaitingForUserAnsw.target == 'rewriteNewDeadline' && (message.text != 'Назад') && isWaitingForUserAnsw.creator == message.chat.id) {
       try {
          let tempDeadline = message.text.match(/(\d{2})\.(\d{2})\.(\d{4})/)
          if (tempDeadline < new Date()) {
@@ -469,7 +469,7 @@ bot.on('message', async (message) => {
             })
             await bot.sendMessage(message.chat.id, 'Дз успешно изменено.', {
                reply_markup: {
-                  keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
+                  keyboard: chats[message.chat.id].permission_title == 'basic' ? menus().basic : menus().extended
                }
             })
             resetUserInput()
@@ -481,7 +481,7 @@ bot.on('message', async (message) => {
 
 
    }
-   if (isWaitingForUserAnsw.target == 'deleteHomework' && (message.text != 'Назад')) {
+   if (isWaitingForUserAnsw.target == 'deleteHomework' && (message.text != 'Назад') && isWaitingForUserAnsw.creator == message.chat.id) {
       await getHomeworkFromDB()
       await getUsersFromDB()
 
@@ -499,7 +499,7 @@ bot.on('message', async (message) => {
          })
          await bot.sendMessage(message.chat.id, 'Дз успешно удалено.', {
             reply_markup: {
-               keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
+               keyboard: chats[message.chat.id].permission_title == 'basic' ? menus().basic : menus().extended
             }
          })
          await getHomeworkFromDB()
@@ -508,14 +508,14 @@ bot.on('message', async (message) => {
       } else {
          await bot.sendMessage(message.chat.id, 'Дз не было найдено либо у Вас нет к нему доступа.', {
             reply_markup: {
-               keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
+               keyboard: chats[message.chat.id].permission_title == 'basic' ? menus().basic : menus().extended
             }
          })
          resetUserInput()
       }
 
    }
-   if (isWaitingForUserAnsw.target == 'editPermission' && (message.text != 'Назад')) {
+   if (isWaitingForUserAnsw.target == 'editPermission' && (message.text != 'Назад') && isWaitingForUserAnsw.creator == message.chat.id) {
       if (!isWaitingForUserAnsw.data) return
       await getPermissionFromDB()
 
@@ -554,9 +554,13 @@ bot.on('callback_query', async (message) => {
          if (Object.keys(homework).length > 0) {
             let tempMessage = ''
             for (let lesson of Object.keys(homework)) {
-               tempMessage += buildHomeworkMessage(homework[lesson], lesson, chats[chatID]) + '\n';
+               tempMessage += buildHomeworkMessage(homework[lesson], lesson, chats[chatID]);
             }
-            await bot.sendMessage(chatID, tempMessage, { parse_mode: 'HTML' })
+            if (tempMessage.length > 0) {
+               await bot.sendMessage(chatID, tempMessage, { parse_mode: 'HTML' })
+            } else {
+               await bot.sendMessage(chatID, `Дз нету!`)
+            }
          } else {
             await bot.sendMessage(chatID, `Дз нету!`)
          }
@@ -575,7 +579,13 @@ bot.on('callback_query', async (message) => {
          bot.answerCallbackQuery(message.id)
       } else {
          if (homework[Object.keys(lessons)[data.lesson]]) {
-            await bot.sendMessage(chatID, buildHomeworkMessage(homework[Object.keys(lessons)[data.lesson]], Object.keys(lessons)[data.lesson], chats[chatID]), { parse_mode: 'HTML' })
+            let tempMessage = buildHomeworkMessage(homework[Object.keys(lessons)[data.lesson]], Object.keys(lessons)[data.lesson], chats[chatID])
+            if (tempMessage) {
+
+               await bot.sendMessage(chatID, tempMessage, { parse_mode: 'HTML' })
+            } else {
+               await bot.sendMessage(chatID, `Дз по дисциплине "${Object.keys(lessons)[data.lesson]}" нет`)
+            }
          } else {
             await bot.sendMessage(chatID, `Дз по дисциплине "${Object.keys(lessons)[data.lesson]}" нет`)
          }
@@ -595,7 +605,6 @@ bot.on('callback_query', async (message) => {
       bot.answerCallbackQuery(message.id)
    }
 
-
    if (data.target == 'addHomeworkText') {
       if (chats[chatID].class == 'basic') return
 
@@ -607,7 +616,7 @@ bot.on('callback_query', async (message) => {
          bot.answerCallbackQuery(message.id)
          return await bot.sendMessage(chatID, 'У Вас нет доступа к добавлению дз по этой дисциплине.', {
             reply_markup: {
-               keyboard: chats[message.chat.id].permission == 'basic' ? menus().basic : menus().extended
+               keyboard: chats[message.chat.id].permission_title == 'basic' ? menus().basic : menus().extended
             }
          })
       }
@@ -618,7 +627,7 @@ bot.on('callback_query', async (message) => {
       await bot.sendMessage(chatID, `Что задали по дисциплине "${tempTask.lesson}"?`)
       bot.answerCallbackQuery(message.id)
       tempTask.type = lessons[tempTask.lesson][data.lesson]
-      isWaitingForUserAnsw = { target: 'addHomeworkText', isWaiting: true }
+      isWaitingForUserAnsw = { target: 'addHomeworkText', isWaiting: true, creator: chatID }
 
    }
    if (data.target == 'addHomeworkType') {
@@ -648,7 +657,7 @@ bot.on('callback_query', async (message) => {
             inline_keyboard: parseLessonsForOptions(lessons[tempTask.lesson], 1, 'addHomeworkText', [], { isSettedType: true })
          })
       })
-      isWaitingForUserAnsw = { target: 'addHomeworkType', isWaiting: true }
+      isWaitingForUserAnsw = { target: 'addHomeworkType', isWaiting: true, creator: chatID }
       bot.answerCallbackQuery(message.id)
 
    }
@@ -670,7 +679,7 @@ bot.on('callback_query', async (message) => {
       }
 
       if (data.data == 'yes') {
-         isWaitingForUserAnsw = { target: 'addDeadline', isWaiting: true }
+         isWaitingForUserAnsw = { target: 'addDeadline', isWaiting: true, creator: chatID }
          await bot.sendMessage(chatID, 'Какой дедлайн у домашки? (Ответ требует формата дд.мм.гггг, например 01.01.1970. Обратите внимание на кол-во дней в месяце, чтобы домашка установилась правильно)')
          bot.answerCallbackQuery(message.id)
       } else {
@@ -734,7 +743,7 @@ bot.on('callback_query', async (message) => {
       } else {
          await bot.sendMessage(chatID, 'Введи новый текст для:\n' + buildHomeworkMessage([taskForEdit], taskForEdit.homework_lesson, chats[chatID]), { parse_mode: 'HTML' })
          bot.answerCallbackQuery(message.id)
-         isWaitingForUserAnsw = { target: 'rewriteNewText', isWaiting: true, taskForEdit: taskForEdit }
+         isWaitingForUserAnsw = { target: 'rewriteNewText', isWaiting: true, taskForEdit: taskForEdit, creator: chatID }
       }
    }
    if (data.target == 'editDeadlineForHomework') {
@@ -763,17 +772,18 @@ bot.on('callback_query', async (message) => {
          await bot.sendMessage(chatID, 'Введи новый дедлайн для (Ответ требует формата дд.мм.гггг, например 01.01.1970. Обратите внимание на кол-во дней в месяце, чтобы домашка установилась правильно):')
          await bot.sendMessage(chatID, buildHomeworkMessage([taskForEdit], taskForEdit.homework_lesson, chats[chatID]), { parse_mode: 'HTML' })
          bot.answerCallbackQuery(message.id)
-         isWaitingForUserAnsw = { target: 'rewriteNewDeadline', isWaiting: true, taskForEdit: taskForEdit }
+         isWaitingForUserAnsw = { target: 'rewriteNewDeadline', isWaiting: true, taskForEdit: taskForEdit, creator: chatID }
       }
    }
    if (data.target == 'editPermission') {
       await getUsersFromDB()
-      if (chats[data.user].permission_title != 'senior') {
-         return await bot.sendMessage(chatID, 'У вас нет доступа к данному функционалу.', {
+      if (chats[chatID].permission_title != 'senior') {
+         await bot.sendMessage(chatID, 'У вас нет доступа к данному функционалу.', {
             reply_markup: {
                keyboard: chats[chatID].permission == 'basic' ? menus().basic : menus().extended
             }
          })
+         return
       }
       if (data.user == '1386879737') {
          await bot.sendMessage(chatID, 'Вы не можете изменить права данному пользователю.', {
