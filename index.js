@@ -8,10 +8,10 @@ const path = require("path")
 
 //Functions
 const buildHomeworkMessage = require(path.resolve(__dirname, "./commands/buildHomeworkMessage.js"))
+const getHomeworkArray = require(path.resolve(__dirname, "./commands/getHomeworkArray.js"))
 const parseLessonsForOptions = require(path.resolve(__dirname, "./commands/parseLessonsForOptions.js")) //Передаётся список предметов
 const getParsedHomework = require(path.resolve(__dirname, "./commands/getParsedHomework.js"))
 const parseLessonsForDays = require(path.resolve(__dirname, "./commands/parseLessonsForDays.js")) //Передаётся "сырая" дата апи вуза
-const getOverdueHomework = require(path.resolve(__dirname, "./commands/getOverdueHomework.js")) //Передаётся "сырая" дата апи вуза
 const getListOfLessons = require(path.resolve(__dirname, "./commands/getListOfLessons.js")) //Передаётся "сырая" дата апи вуза
 const getHomeworkForTomorrow = require(path.resolve(__dirname, "./commands/getHomeworkForTomorrow.js"))
 
@@ -42,6 +42,7 @@ const resetTempTask = (chatID) => {
 }
 
 //DB functions
+
 const setUsersFromDB = (data) => {
 	if (data <= 0) return {}
 	for (let i of data) {
@@ -134,6 +135,7 @@ const getHomeworkWithFileFromDB = async () => {
 	})
 	await new Promise((resolve) => setTimeout(resolve, 250))
 }
+
 //ENV
 const BOT_TOKEN = process.env.homeworkBot_token || "0"
 
@@ -282,7 +284,7 @@ setInterval(async () => {
 			}
 		}
 
-		let overdueHomework = getOverdueHomework(homework, 7)
+		let overdueHomework = getHomeworkArray(homework, 30, { mode: "overdue" })
 
 		if (overdueHomework) {
 			for (let overdueLesson of Object.keys(overdueHomework)) {
@@ -435,6 +437,15 @@ bot.onText(/Посмотреть дз/, async (message) => {
 						callback_data: JSON.stringify({
 							target: "homework",
 							lesson: "Всё",
+						}),
+					},
+				],
+				[
+					{
+						text: "Архив дз",
+						callback_data: JSON.stringify({
+							target: "homework",
+							lesson: "Архив",
 						}),
 					},
 				],
@@ -658,7 +669,7 @@ bot.on("message", async (message) => {
 		}
 		if (pool[chatID].target == "addHomeworkText") {
 			if (message.document) {
-				pool[chatID].tempTask.homework_text = message.caption
+				pool[chatID].tempTask.homework_text = message.caption || ""
 				pool[chatID].tempTask.homework_files = { arr: [], type: "" }
 				pool[chatID].tempTask.homework_files.arr = [message.document.file_id]
 				pool[chatID].tempTask.homework_files.type = "document"
@@ -670,7 +681,7 @@ bot.on("message", async (message) => {
 					console.log("670 line. Inserting document via adding homework")
 				})
 			} else if (message.photo) {
-				pool[chatID].tempTask.homework_text = message.caption
+				pool[chatID].tempTask.homework_text = message.caption || ""
 				pool[chatID].tempTask.homework_files = { arr: [], type: "" }
 				pool[chatID].tempTask.homework_files.arr = [message.photo[0].file_id]
 				pool[chatID].tempTask.homework_files.type = "photo"
@@ -1051,6 +1062,9 @@ bot.on("message", async (message) => {
 
 bot.on("callback_query", async (message) => {
 	await getUsersFromDB()
+	await getHomeworkFromDB()
+	await getFileFromDB()
+	await getHomeworkWithFileFromDB()
 	let chatID = message.message.chat.id
 
 	if (!(chatID in chats)) {
@@ -1064,19 +1078,16 @@ bot.on("callback_query", async (message) => {
 	}
 	let data = JSON.parse(message.data)
 	if (data.target == "homework") {
-		await getHomeworkFromDB()
-		await getUsersFromDB()
-		await getFileFromDB()
-		await getHomeworkWithFileFromDB()
 		if (data.lesson == "Всё") {
-			if (!(Object.keys(homework).length > 0)) await bot.sendMessage(chatID, `Дз нету!`)
+			let actualHomework = getHomeworkArray(homework, 0, { mode: "ahead" })
+			if (!(Object.keys(actualHomework).length > 0)) await bot.sendMessage(chatID, `Домашнее задание отсутствует.`)
 
-			for (let lesson of Object.keys(homework)) {
+			for (let lesson of Object.keys(actualHomework)) {
 				await bot.sendMessage(chatID, `Дз по дисциплине "<u>${lesson}</u>":`, {
 					parse_mode: "HTML",
 				})
 
-				for (let hw of homework[lesson]) {
+				for (let hw of actualHomework[lesson]) {
 					if (
 						!(
 							chats[chatID].student_english == hw.homework_english_group ||
@@ -1275,14 +1286,119 @@ bot.on("callback_query", async (message) => {
 				}
 			}
 			bot.answerCallbackQuery(message.id)
+		} else if (data.lesson == "Архив") {
+			let archiveHomework = getHomeworkArray(homework, 1, { mode: "overdue" })
+			if (!(Object.keys(archiveHomework).length > 0)) await bot.sendMessage(chatID, `Домашнее задание отсутствует.`)
+
+			for (let lesson of Object.keys(archiveHomework)) {
+				await bot.sendMessage(chatID, `Дз по дисциплине "<u>${lesson}</u>":`, {
+					parse_mode: "HTML",
+				})
+
+				for (let hw of archiveHomework[lesson]) {
+					if (
+						!(
+							chats[chatID].student_english == hw.homework_english_group ||
+							hw.homework_english_group == 0 ||
+							chats[chatID].permission_title == "senior"
+						)
+					)
+						continue
+					let hwText = buildHomeworkMessage(hw, chats[chatID])
+
+					let filesForSending = []
+					if (homeworkWithFiles[hw.homework_id]) {
+						for (let fileID of homeworkWithFiles[hw.homework_id]) {
+							if (!files[fileID]) return
+							filesForSending.push(files[fileID])
+						}
+					}
+					if (filesForSending.length == 0) {
+						await bot.sendMessage(chatID, hwText, {
+							parse_mode: "HTML",
+						})
+					}
+					if (filesForSending.length == 1) {
+						if (filesForSending[0].file_type == "document") {
+							if (hwText.length <= 1024) {
+								await bot.sendDocument(chatID, filesForSending[0].file_name, {
+									caption: hwText,
+									parse_mode: "HTML",
+								})
+							} else {
+								await bot.sendMessage(chatID, hwText + "\n&#9660; Документ к дз снизу &#9660;", {
+									parse_mode: "HTML",
+								})
+								await bot.sendDocument(chatID, filesForSending[0].file_name)
+							}
+						}
+						if (filesForSending[0].file_type == "photo") {
+							if (hwText.length <= 1024) {
+								await bot.sendPhoto(chatID, filesForSending[0].file_name, {
+									caption: hwText,
+									parse_mode: "HTML",
+								})
+							} else {
+								await bot.sendMessage(chatID, hwText + "\n&#9660; Фото к дз снизу &#9660;", {
+									parse_mode: "HTML",
+								})
+								await bot.sendPhoto(chatID, filesForSending[0].file_name)
+							}
+						}
+					}
+					if (filesForSending.length > 1) {
+						let photos = []
+						let docs = []
+						let flag = false
+						for (let item of filesForSending) {
+							if (item.file_type == "document")
+								docs.push({
+									type: "document",
+									media: item.file_name,
+								})
+							if (item.file_type == "photo")
+								photos.push({
+									type: "photo",
+									media: item.file_name,
+								})
+						}
+						if (photos.length > 0) {
+							if (hwText.length <= 990) {
+								photos[0].caption = "\n&#9660; Файлы к дз снизу &#9660;\n" + hwText
+								photos[0].parse_mode = "HTML"
+								await bot.sendMediaGroup(chatID, photos)
+								flag = true
+							} else {
+								await bot.sendMessage(chatID, hwText, {
+									parse_mode: "HTML",
+								})
+								await bot.sendMediaGroup(chatID, photos)
+							}
+						}
+						if (docs.length > 0) {
+							if (!flag && hwText.length <= 990) {
+								docs[0].caption = hwText
+								docs[0].parse_mode = "HTML"
+								await bot.sendMediaGroup(chatID, docs)
+							} else if (flag) {
+								docs[0].caption = "&#9650; Файлы к дз, что выше &#9650;"
+								docs[0].parse_mode = "HTML"
+								await bot.sendMediaGroup(chatID, docs)
+							}
+						}
+					}
+				}
+			}
+			bot.answerCallbackQuery(message.id)
 		} else {
-			if (homework[Object.keys(lessons)[data.lesson]]) {
-				if (!(homework[Object.keys(lessons)[data.lesson]].length > 0))
+			let actualHomework = getHomeworkArray(homework, 0, { mode: "ahead" })
+			if (actualHomework[Object.keys(lessons)[data.lesson]]) {
+				if (!(actualHomework[Object.keys(lessons)[data.lesson]].length > 0))
 					await bot.sendMessage(chatID, `Дз по дисциплине "${Object.keys(lessons)[data.lesson]}" нет`)
 
 				await bot.sendMessage(chatID, `Дз по дисциплине "<u>${Object.keys(lessons)[data.lesson]}</u>":`, { parse_mode: "HTML" })
 
-				for (let hw of homework[Object.keys(lessons)[data.lesson]]) {
+				for (let hw of actualHomework[Object.keys(lessons)[data.lesson]]) {
 					if (
 						!(
 							chats[chatID].student_english == hw.homework_english_group ||
@@ -1378,6 +1494,7 @@ bot.on("callback_query", async (message) => {
 
 				bot.answerCallbackQuery(message.id)
 			}
+			bot.answerCallbackQuery(message.id)
 		}
 	}
 	if (data.target == "english") {
@@ -1418,7 +1535,6 @@ bot.on("callback_query", async (message) => {
 		pool[chatID].target = "addHomeworkText"
 	}
 	if (data.target == "addHomeworkType") {
-		await getUsersFromDB()
 		pool[chatID] = { tempTask: {} }
 		if (!pool[chatID]?.tempTask?.homework_lesson) {
 			let lessonID = data.lesson
@@ -1655,8 +1771,6 @@ bot.on("callback_query", async (message) => {
 	if (data.target == "editTextForHomework") {
 		if (chats[chatID].class == "basic") return
 		let taskForEdit = null
-		await getHomeworkFromDB()
-		await getUsersFromDB()
 
 		for (let key of Object.keys(homework)) {
 			homework[key].forEach(async (item) => {
@@ -1700,8 +1814,6 @@ bot.on("callback_query", async (message) => {
 	if (data.target == "editDeadlineForHomework") {
 		if (chats[chatID].class == "basic") return
 		let taskForEdit = null
-		await getHomeworkFromDB()
-		await getUsersFromDB()
 		for (let key of Object.keys(homework)) {
 			homework[key].forEach(async (item) => {
 				if (item.homework_id == data.taskID) {
@@ -1744,7 +1856,6 @@ bot.on("callback_query", async (message) => {
 		}
 	}
 	if (data.target == "editPermission") {
-		await getUsersFromDB()
 		if (chats[chatID].permission_title != "senior") {
 			await bot.sendMessage(chatID, "У вас нет доступа к данному функционалу.", {
 				reply_markup: {
@@ -1781,10 +1892,6 @@ bot.on("callback_query", async (message) => {
 	if (data.target == "deletePhotoDocForHomework") {
 		if (chats[chatID].class == "basic") return
 		let taskForEdit = null
-		await getHomeworkFromDB()
-		await getUsersFromDB()
-		await getFileFromDB()
-		await getHomeworkWithFileFromDB()
 
 		for (let key of Object.keys(homework)) {
 			homework[key].forEach(async (item) => {
@@ -1831,10 +1938,6 @@ bot.on("callback_query", async (message) => {
 	if (data.target == "addPhotoDocForHomework") {
 		if (chats[chatID].class == "basic") return
 		let taskForEdit = null
-		await getHomeworkFromDB()
-		await getUsersFromDB()
-		await getFileFromDB()
-		await getHomeworkWithFileFromDB()
 
 		for (let key of Object.keys(homework)) {
 			homework[key].forEach(async (item) => {
