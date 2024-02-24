@@ -427,7 +427,7 @@ bot.onText(/Разное/, async (message) => {
 		},
 	})
 })
-bot.onText(/Работа с домашним заданием/, async (message) => {
+bot.onText(/Редактирование домашнего задания/, async (message) => {
 	await getUsersFromDB()
 	let chatID = message.chat.id
 	if (!(chatID in chats)) return
@@ -1348,6 +1348,20 @@ bot.on("callback_query", async (message) => {
 			if (!(Object.keys(actualHomework).length > 0)) await bot.sendMessage(chatID, `Домашнее задание отсутствует.`)
 
 			for (let lesson of Object.keys(actualHomework)) {
+				if (lesson == "Иностранный язык") {
+					let tempArray = []
+					for (let item of actualHomework[lesson]) {
+						if (item.homework_english_group == chats[chatID].student_english) {
+							tempArray.push(item)
+						}
+					}
+					actualHomework[lesson] = tempArray
+				}
+				if (Object.keys(actualHomework).length == 1 && actualHomework[lesson] && lesson == "Иностранный язык") {
+					return await bot.sendMessage(chatID, `Домашнее задание отсутствует.`)
+				}
+				if (actualHomework[lesson].length < 1) continue
+
 				await bot.sendMessage(chatID, `Дз по дисциплине "<u>${lesson}</u>":`, {
 					parse_mode: "HTML",
 				})
@@ -1452,6 +1466,23 @@ bot.on("callback_query", async (message) => {
 			if (!(Object.keys(homeworkForTomorrow).length > 0)) await bot.sendMessage(chatID, `Дз на завтра отсутствует.`)
 
 			for (let lesson of Object.keys(homeworkForTomorrow)) {
+				if (lesson == "Иностранный язык") {
+					let tempArray = []
+					for (let item of homeworkForTomorrow[lesson]) {
+						if (item.homework_english_group == chats[chatID].student_english) {
+							console.log(1470)
+							tempArray.push(item)
+						}
+					}
+					console.log(tempArray)
+					homeworkForTomorrow[lesson] = tempArray
+				}
+				if (Object.keys(homeworkForTomorrow).length == 1 && homeworkForTomorrow[lesson] && lesson == "Иностранный язык") {
+					return await bot.sendMessage(chatID, `Дз на завтра отсутствует.`)
+				}
+
+				if (homeworkForTomorrow[lesson].length < 1) continue
+
 				await bot.sendMessage(chatID, `Дз по дисциплине "<u>${lesson}</u>":`, {
 					parse_mode: "HTML",
 				})
@@ -1553,9 +1584,26 @@ bot.on("callback_query", async (message) => {
 			bot.answerCallbackQuery(message.id)
 		} else if (data.lesson == "Архив") {
 			let archiveHomework = getHomeworkArray(homework, 1, { mode: "overdue" })
+
 			if (!(Object.keys(archiveHomework).length > 0)) await bot.sendMessage(chatID, `Домашнее задание отсутствует.`)
 
 			for (let lesson of Object.keys(archiveHomework)) {
+				if (lesson == "Иностранный язык") {
+					let tempArray = []
+					for (let item of archiveHomework[lesson]) {
+						if (item.homework_english_group == chats[chatID].student_english) {
+							tempArray.push(item)
+						}
+					}
+					archiveHomework[lesson] = tempArray
+				}
+
+				if (Object.keys[archiveHomework].length == 1 && archiveHomework[lesson] && lesson == "Иностранный язык") {
+					return await bot.sendMessage(chatID, `Домашнее задание отсутствует.`)
+				}
+
+				if (archiveHomework[lesson].length < 1) continue
+
 				await bot.sendMessage(chatID, `Дз по дисциплине "<u>${lesson}</u>":`, {
 					parse_mode: "HTML",
 				})
@@ -1657,108 +1705,114 @@ bot.on("callback_query", async (message) => {
 			bot.answerCallbackQuery(message.id)
 		} else {
 			let actualHomework = getHomeworkArray(homework, 0, { mode: "ahead" })
-			if (actualHomework[Object.keys(lessons)[data.lesson]]) {
-				if (!(actualHomework[Object.keys(lessons)[data.lesson]].length > 0))
-					await bot.sendMessage(chatID, `Дз по дисциплине "${Object.keys(lessons)[data.lesson]}" нет`)
+			if (Object.keys(lessons)[data.lesson] == "Иностранный язык") {
+				let tempArray = []
+				for (let item of actualHomework[Object.keys(lessons)[data.lesson]]) {
+					if (item.homework_english_group == chats[chatID].student_english) {
+						tempArray.push(item)
+					}
+				}
+				actualHomework[Object.keys(lessons)[data.lesson]] = tempArray
+			}
 
-				await bot.sendMessage(chatID, `Дз по дисциплине "<u>${Object.keys(lessons)[data.lesson]}</u>":`, { parse_mode: "HTML" })
+			if (!(actualHomework[Object.keys(lessons)[data.lesson]].length > 0))
+				return await bot.sendMessage(chatID, `Дз по дисциплине "${Object.keys(lessons)[data.lesson]}" нет`)
 
-				for (let hw of actualHomework[Object.keys(lessons)[data.lesson]]) {
-					if (
-						!(
-							chats[chatID].student_english == hw.homework_english_group ||
-							hw.homework_english_group == 0 ||
-							chats[chatID].permission_title == "senior"
-						)
+			await bot.sendMessage(chatID, `Дз по дисциплине "<u>${Object.keys(lessons)[data.lesson]}</u>":`, { parse_mode: "HTML" })
+			for (let hw of actualHomework[Object.keys(lessons)[data.lesson]]) {
+				if (
+					!(
+						chats[chatID].student_english == hw.homework_english_group ||
+						hw.homework_english_group == 0 ||
+						chats[chatID].permission_title == "senior"
 					)
-						continue
-					let hwText = buildHomeworkMessage(hw, chats[chatID])
+				)
+					continue
+				let hwText = buildHomeworkMessage(hw, chats[chatID])
 
-					let filesForSending = []
-					if (homeworkWithFiles[hw.homework_id]) {
-						for (let fileID of homeworkWithFiles[hw.homework_id]) {
-							if (!files[fileID]) return
-							filesForSending.push(files[fileID])
+				let filesForSending = []
+				if (homeworkWithFiles[hw.homework_id]) {
+					for (let fileID of homeworkWithFiles[hw.homework_id]) {
+						if (!files[fileID]) return
+						filesForSending.push(files[fileID])
+					}
+				}
+				if (filesForSending.length == 0) {
+					await bot.sendMessage(chatID, hwText, {
+						parse_mode: "HTML",
+					})
+				}
+				if (filesForSending.length == 1) {
+					if (filesForSending[0].file_type == "document") {
+						if (hwText.length <= 1024) {
+							await bot.sendDocument(chatID, filesForSending[0].file_name, {
+								caption: hwText,
+								parse_mode: "HTML",
+							})
+						} else {
+							await bot.sendMessage(chatID, hwText + "\n&#9660; Документ к дз снизу &#9660;", {
+								parse_mode: "HTML",
+							})
+							await bot.sendDocument(chatID, filesForSending[0].file_name)
 						}
 					}
-					if (filesForSending.length == 0) {
-						await bot.sendMessage(chatID, hwText, {
-							parse_mode: "HTML",
-						})
-					}
-					if (filesForSending.length == 1) {
-						if (filesForSending[0].file_type == "document") {
-							if (hwText.length <= 1024) {
-								await bot.sendDocument(chatID, filesForSending[0].file_name, {
-									caption: hwText,
-									parse_mode: "HTML",
-								})
-							} else {
-								await bot.sendMessage(chatID, hwText + "\n&#9660; Документ к дз снизу &#9660;", {
-									parse_mode: "HTML",
-								})
-								await bot.sendDocument(chatID, filesForSending[0].file_name)
-							}
-						}
-						if (filesForSending[0].file_type == "photo") {
-							if (hwText.length <= 1024) {
-								await bot.sendPhoto(chatID, filesForSending[0].file_name, {
-									caption: hwText,
-									parse_mode: "HTML",
-								})
-							} else {
-								await bot.sendMessage(chatID, hwText + "\n&#9660; Фото к дз снизу &#9660;", {
-									parse_mode: "HTML",
-								})
-								await bot.sendPhoto(chatID, filesForSending[0].file_name)
-							}
-						}
-					}
-					if (filesForSending.length > 1) {
-						let photos = []
-						let docs = []
-						let flag = false
-						for (let item of filesForSending) {
-							if (item.file_type == "document")
-								docs.push({
-									type: "document",
-									media: item.file_name,
-								})
-							if (item.file_type == "photo")
-								photos.push({
-									type: "photo",
-									media: item.file_name,
-								})
-						}
-						if (photos.length > 0) {
-							if (hwText.length <= 990) {
-								photos[0].caption = "\n&#9660; Файлы к дз снизу &#9660;\n" + hwText
-								photos[0].parse_mode = "HTML"
-								await bot.sendMediaGroup(chatID, photos)
-								flag = true
-							} else {
-								await bot.sendMessage(chatID, hwText, {
-									parse_mode: "HTML",
-								})
-								await bot.sendMediaGroup(chatID, photos)
-							}
-						}
-						if (docs.length > 0) {
-							if (!flag && hwText.length <= 990) {
-								docs[0].caption = hwText
-								docs[0].parse_mode = "HTML"
-								await bot.sendMediaGroup(chatID, docs)
-							} else if (flag) {
-								docs[0].caption = "&#9650; Файлы к дз, что выше &#9650;"
-								docs[0].parse_mode = "HTML"
-								await bot.sendMediaGroup(chatID, docs)
-							}
+					if (filesForSending[0].file_type == "photo") {
+						if (hwText.length <= 1024) {
+							await bot.sendPhoto(chatID, filesForSending[0].file_name, {
+								caption: hwText,
+								parse_mode: "HTML",
+							})
+						} else {
+							await bot.sendMessage(chatID, hwText + "\n&#9660; Фото к дз снизу &#9660;", {
+								parse_mode: "HTML",
+							})
+							await bot.sendPhoto(chatID, filesForSending[0].file_name)
 						}
 					}
 				}
-
-				bot.answerCallbackQuery(message.id)
+				if (filesForSending.length > 1) {
+					let photos = []
+					let docs = []
+					let flag = false
+					for (let item of filesForSending) {
+						if (item.file_type == "document")
+							docs.push({
+								type: "document",
+								media: item.file_name,
+							})
+						if (item.file_type == "photo")
+							photos.push({
+								type: "photo",
+								media: item.file_name,
+							})
+					}
+					if (photos.length > 0) {
+						if (hwText.length <= 990) {
+							photos[0].caption = "\n&#9660; Файлы к дз снизу &#9660;\n" + hwText
+							photos[0].parse_mode = "HTML"
+							await bot.sendMediaGroup(chatID, photos)
+							flag = true
+						} else {
+							await bot.sendMessage(chatID, hwText, {
+								parse_mode: "HTML",
+							})
+							await bot.sendMediaGroup(chatID, photos)
+						}
+					}
+					if (docs.length > 0) {
+						if (!flag && hwText.length <= 990) {
+							docs[0].caption = hwText
+							docs[0].parse_mode = "HTML"
+							await bot.sendMediaGroup(chatID, docs)
+						} else if (flag) {
+							docs[0].caption = "&#9650; Файлы к дз, что выше &#9650;"
+							docs[0].parse_mode = "HTML"
+							await bot.sendMediaGroup(chatID, docs)
+						}
+					}
+				}
 			}
+
 			bot.answerCallbackQuery(message.id)
 		}
 	}
@@ -2239,7 +2293,7 @@ bot.on("callback_query", async (message) => {
 				resetUserInput(chatID)
 			}
 		} else {
-			if (homeworkWithFiles[taskForEdit.homework_id].length > 10) {
+			if (homeworkWithFiles[taskForEdit.homework_id]?.length > 10) {
 				bot.answerCallbackQuery(message.id)
 				return await bot.sendMessage(chatID, "Домашнее задание не может иметь более 10 закрепленных за ним файлов и фотографий.")
 			}
