@@ -11,9 +11,9 @@ module.exports = function CastToOneMassage(homework, chatEntity) {
 			: new Date(homework.homework_deadline).getMonth() + 1
 	let deadlineYear = new Date(homework.homework_deadline).getFullYear()
 	let tempDeadline = deadlineDay + "." + deadlineMonth + "." + deadlineYear
-	finalHomeworkText += `${homework.homework_text}\n${homework.homework_deadline ? "До: " + tempDeadline : "До: Сроки не были вписаны"}\nТип: ${
-		homework.homework_type
-	} ${chatEntity.permission_title == "senior" ? "\nГруппа: " + homework.homework_english_group : ""} ${
+	finalHomeworkText += `${homework.homework_text ? homework.homework_text + "\n" : ""}${
+		homework.homework_deadline ? "До: " + tempDeadline : "До: Сроки не были вписаны"
+	}\nТип: ${homework.homework_type} ${chatEntity.permission_title == "senior" ? "\nГруппа: " + homework.homework_english_group : ""} ${
 		homework.homework_creator == chatEntity.student_id || chatEntity.permission_title == "senior"
 			? "\nID: " + " <code>" + homework.homework_id + "</code>"
 			: ""

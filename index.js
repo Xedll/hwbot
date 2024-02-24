@@ -28,6 +28,7 @@ let homework = {}
 let chats = {}
 let files = {}
 let pool = {}
+let books = {}
 let homeworkWithFiles = {}
 
 const db = new sqlite3.Database(path.resolve(__dirname, "../db/homework.db"), sqlite3.OPEN_READWRITE, (err) => {
@@ -44,7 +45,8 @@ const resetTempTask = (chatID) => {
 //DB functions
 
 const setUsersFromDB = (data) => {
-	if (data <= 0) return {}
+	if (data <= 0) return (chats = {})
+	chats = {}
 	for (let i of data) {
 		chats[i.student_id] = { ...i }
 	}
@@ -78,7 +80,7 @@ const getHomeworkFromDB = async () => {
 }
 
 const setPermissionFromDB = (data) => {
-	if (data <= 0) return {}
+	if (data <= 0) return
 	permission = [...data]
 }
 const getPermissionFromDB = async () => {
@@ -95,7 +97,8 @@ const getPermissionFromDB = async () => {
 }
 
 const setFileFromDB = (data) => {
-	if (data <= 0) return {}
+	if (data <= 0) return (files = {})
+	files = {}
 	for (let item of data) {
 		files[item.file_id] = item
 	}
@@ -114,7 +117,7 @@ const getFileFromDB = async () => {
 }
 
 const setHomeworkWithFileFromDB = (data) => {
-	if (data <= 0) return {}
+	if (data <= 0) return (homeworkWithFiles = {})
 	homeworkWithFiles = {}
 	for (let item of data) {
 		if (homeworkWithFiles[item.homework_id]) {
@@ -132,6 +135,25 @@ const getHomeworkWithFileFromDB = async () => {
 		}
 		console.log("132 line, Getting all files")
 		await setHomeworkWithFileFromDB(rows)
+	})
+	await new Promise((resolve) => setTimeout(resolve, 250))
+}
+
+const setBooksFromDB = (data) => {
+	if (data <= 0) return (books = {})
+	books = {}
+	for (let item of data) {
+		books[item.file_id] = item.book_name
+	}
+}
+const getBooksFromDB = async () => {
+	db.all("SELECT * FROM book", [], async (err, rows) => {
+		if (err) {
+			console.log("129 line")
+			return console.error(err.message)
+		}
+		console.log("132 line, Getting all files")
+		setBooksFromDB(rows)
 	})
 	await new Promise((resolve) => setTimeout(resolve, 250))
 }
@@ -325,7 +347,7 @@ bot.onText(/\/start/, async (message) => {
 		'Данный бот создавался для удобства, ведь в группе для "очень важной" информации уже месиво какое-то из вообще всего.\
       \n\nВы можете поменять группу по иностранному языку, чтобы Вам отображалась домашние задания только Вашей группы (Если она есть в базе данных).\
       \n\nТак же можете просматривать всё домашнее задание, имеющееся в базе данных \
-      (Домашние задания хранятся в боте вплоть до 7 дней после дедлайна, после чего удаляются).\
+      (Домашние задания хранятся в боте вплоть до 30 дней после дедлайна, после чего удаляются. Старое дз находится в "архиве" при опции просмотра дз).\
       \n\nПри добавлении нового домашнего задания, всем, кто хоть раз активировал бота, придет сообщение об этом. \
       Его можно отключить нажав на кнопку "Разное" под полем ввода сообщения, после - "Настройка получения уведомлений о добавлении нового дз".\
        Ну или просто замутить бота.\n\nЕжедневно в 14:00-14:05 минут будет приходить напоминание со списком домашнего задания на завтра.\
@@ -624,6 +646,81 @@ bot.onText(/Изменить права юзеру/, async (message) => {
 		}
 	}
 })
+//!
+bot.onText(/Учебники/, async (message) => {
+	await getBooksFromDB()
+	await getFileFromDB()
+	let chatID = message.chat.id
+	if (!(chatID in chats)) return
+	if (Object.keys(books).length < 1) return await bot.sendMessage(chatID, "Учебников нет.")
+	for (let book of Object.keys(books)) {
+		await bot.sendDocument(chatID, files[book].file_name, { caption: books[book] })
+	}
+})
+
+bot.onText(/Редактирование учебников/, async (message) => {
+	let chatID = message.chat.id
+	await getUsersFromDB()
+	if (!(chatID in chats)) return
+	if (chats[chatID].permission_title != "senior") return
+	await bot.sendMessage(chatID, "Что делаем?", { reply_markup: { keyboard: [["Добавить учебник"], ["Удалить учебник"], ["Изменить учебник"], ["Назад"]] } })
+})
+
+bot.onText(/Изменить учебник/, async (message) => {
+	let chatID = message.chat.id
+	await getUsersFromDB()
+	if (!(chatID in chats)) return
+	if (chats[chatID].permission_title != "senior") return
+	await getBooksFromDB()
+	if (Object.keys(books) < 1) return await bot.sendMessage(chatID, "В базе данных отсутствуют учебники для редактирования")
+	await bot.sendMessage(chatID, "Введите айди учебника")
+	for (let book of Object.keys(books)) {
+		await bot.sendDocument(chatID, files[book].file_name, { caption: `${books[book]}\nID: <code>${book}</code>`, parse_mode: "HTML" })
+	}
+	if (pool[chatID]) {
+		pool[chatID].target = "editBooks"
+		pool[chatID].data = message.text
+	} else {
+		pool[chatID] = {
+			target: "editBooks",
+			data: message.text,
+		}
+	}
+})
+bot.onText(/Добавить учебник/, async (message) => {
+	let chatID = message.chat.id
+	await getUsersFromDB()
+	if (!(chatID in chats)) return
+	if (chats[chatID].permission_title != "senior") return
+	await bot.sendMessage(chatID, "Отправьте документ с названием учебника в одном сообщении")
+	if (pool[chatID]) {
+		pool[chatID].target = "addBook"
+	} else {
+		pool[chatID] = {
+			target: "addBook",
+		}
+	}
+})
+bot.onText(/Удалить учебник/, async (message) => {
+	let chatID = message.chat.id
+	await getUsersFromDB()
+	if (!(chatID in chats)) return
+	if (chats[chatID].permission_title != "senior") return
+	await getBooksFromDB()
+	if (Object.keys(books) < 1) return await bot.sendMessage(chatID, "В базе данных отсутствуют учебники для редактирования")
+	await bot.sendMessage(chatID, "Введите айди учебника")
+	for (let book of Object.keys(books)) {
+		await bot.sendDocument(chatID, files[book].file_name, { caption: `${books[book]}\nID: <code>${book}</code>`, parse_mode: "HTML" })
+	}
+	if (pool[chatID]) {
+		pool[chatID].target = "deleteBook"
+	} else {
+		pool[chatID] = {
+			target: "deleteBook",
+		}
+	}
+})
+//!
 
 bot.on("message", async (message) => {
 	await getUsersFromDB()
@@ -1054,6 +1151,86 @@ bot.on("message", async (message) => {
 			resetUserInput(chatID)
 			await getFileFromDB()
 		}
+		//!
+		if (pool[chatID].target == "editBooks") {
+			await bot.sendMessage(chatID, "Что меняем у учебника?", {
+				reply_markup: {
+					inline_keyboard: [
+						[
+							{
+								text: "Название",
+								callback_data: JSON.stringify({
+									target: "editBookForTitle",
+									data: message.text,
+								}),
+							},
+						],
+					],
+				},
+			})
+			resetUserInput(chatID)
+		}
+		if (pool[chatID].target == "rewriteNewTitleForBook") {
+			let bookNewTitle = message.text
+			db.run("UPDATE book SET book_name=? WHERE file_id=?", [bookNewTitle, pool[chatID].data.bookID], (err) => {
+				if (err) {
+					console.log("1137 line")
+					return console.error(err)
+				}
+			})
+			await bot.sendMessage(chatID, "Учебник успешно изменен", {
+				reply_markup: {
+					keyboard: chats[chatID].permission_title == "basic" ? menus().basic : menus().extended,
+				},
+			})
+		}
+		if (pool[chatID].target == "addBook") {
+			db.run("INSERT INTO file(file_type, file_name) VALUES (?,?)", ["document", message.document?.file_id], (err) => {
+				if (err) {
+					console.log("1161 line.")
+					console.error(err)
+				}
+			})
+			db.run(
+				"INSERT INTO book(book_name,file_id) VALUES (?,(SELECT file_id FROM file WHERE file_name=?))",
+				[message.caption || "", message.document?.file_id],
+				(err) => {
+					if (err) {
+						console.log("1167 line.")
+						console.error(err)
+					}
+				}
+			)
+			await bot.sendMessage(chatID, "Учебник успешно добавлен", {
+				reply_markup: {
+					keyboard: chats[chatID].permission_title == "basic" ? menus().basic : menus().extended,
+				},
+			})
+			resetUserInput(chatID)
+		}
+		if (pool[chatID].target == "deleteBook") {
+			db.run("delete from book where file_id=?", [message.text], (err) => {
+				if (err) {
+					console.log("1204 line")
+					return console.error(err)
+				}
+			})
+			db.run("delete from file where file_id=?", [message.text], (err) => {
+				if (err) {
+					console.log("1204 line")
+					return console.error(err)
+				}
+			})
+			resetUserInput(chatID)
+			await getBooksFromDB()
+			await getFileFromDB()
+			await bot.sendMessage(chatID, "Учебник успешно удален", {
+				reply_markup: {
+					keyboard: chats[chatID].permission_title == "basic" ? menus().basic : menus().extended,
+				},
+			})
+		}
+		//!
 	} catch (err) {
 		console.log("1047 line")
 		console.error(err)
@@ -1514,7 +1691,7 @@ bot.on("callback_query", async (message) => {
 		bot.answerCallbackQuery(message.id)
 	}
 	if (data.target == "addHomeworkText") {
-		if (chats[chatID].class == "basic") return
+		if (chats[chatID].permission_title == "basic") return
 		if (pool[chatID] == undefined) return
 
 		if (!pool[chatID]?.tempTask?.homework_lesson) {
@@ -1570,7 +1747,7 @@ bot.on("callback_query", async (message) => {
 		bot.answerCallbackQuery(message.id)
 	}
 	if (data.target == "addDeadline") {
-		if (chats[chatID].class == "basic") return
+		if (chats[chatID].permission_title == "basic") return
 		if (!(pool[chatID]?.tempTask?.homework_text && pool[chatID].tempTask.homework_lesson && pool[chatID].tempTask.homework_type)) {
 			return await bot.sendMessage(chatID, "Домашнее задание заполнено некорректно. Начните сначала.")
 		}
@@ -1769,7 +1946,7 @@ bot.on("callback_query", async (message) => {
 		}
 	}
 	if (data.target == "editTextForHomework") {
-		if (chats[chatID].class == "basic") return
+		if (chats[chatID].permission_title == "basic") return
 		let taskForEdit = null
 
 		for (let key of Object.keys(homework)) {
@@ -1812,7 +1989,7 @@ bot.on("callback_query", async (message) => {
 		}
 	}
 	if (data.target == "editDeadlineForHomework") {
-		if (chats[chatID].class == "basic") return
+		if (chats[chatID].permission_title == "basic") return
 		let taskForEdit = null
 		for (let key of Object.keys(homework)) {
 			homework[key].forEach(async (item) => {
@@ -1971,5 +2148,21 @@ bot.on("callback_query", async (message) => {
 			pool[chatID].taskForEdit = taskForEdit
 			bot.answerCallbackQuery(message.id)
 		}
+	}
+	if (data.target == "editBookForTitle") {
+		if (chats[chatID].permission_title != "senior") {
+			await bot.sendMessage(chatID, "У вас нет доступа к данному функционалу.", {
+				reply_markup: {
+					keyboard: chats[chatID].permission == "basic" ? menus().basic : menus().extended,
+				},
+			})
+			return
+		}
+		await getBooksFromDB()
+		let bookForEdit = { bookID: data.data, bookName: books[data.data] }
+		await bot.sendMessage(chatID, "Введите новое название для учебника.")
+		pool[chatID].target = "rewriteNewTitleForBook"
+		pool[chatID].data = bookForEdit
+		bot.answerCallbackQuery(message.id)
 	}
 })
