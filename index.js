@@ -45,7 +45,7 @@ const resetTempTask = (chatID) => {
 //DB functions
 
 const setUsersFromDB = (data) => {
-	if (data <= 0) return (chats = {})
+	if (data.length <= 0) return (chats = {})
 	chats = {}
 	for (let i of data) {
 		chats[i.student_id] = { ...i }
@@ -64,7 +64,7 @@ const getUsersFromDB = async () => {
 }
 
 const setHomeworkFromDB = (data) => {
-	if (data <= 0) return {}
+	if (data.length <= 0) return {}
 	homework = getParsedHomework(data)
 }
 const getHomeworkFromDB = async () => {
@@ -80,7 +80,7 @@ const getHomeworkFromDB = async () => {
 }
 
 const setPermissionFromDB = (data) => {
-	if (data <= 0) return
+	if (data.length <= 0) return
 	permission = [...data]
 }
 const getPermissionFromDB = async () => {
@@ -97,7 +97,7 @@ const getPermissionFromDB = async () => {
 }
 
 const setFileFromDB = (data) => {
-	if (data <= 0) return (files = {})
+	if (data.length <= 0) return (files = {})
 	files = {}
 	for (let item of data) {
 		files[item.file_id] = item
@@ -117,7 +117,7 @@ const getFileFromDB = async () => {
 }
 
 const setHomeworkWithFileFromDB = (data) => {
-	if (data <= 0) return (homeworkWithFiles = {})
+	if (data.length <= 0) return (homeworkWithFiles = {})
 	homeworkWithFiles = {}
 	for (let item of data) {
 		if (homeworkWithFiles[item.homework_id]) {
@@ -140,7 +140,7 @@ const getHomeworkWithFileFromDB = async () => {
 }
 
 const setBooksFromDB = (data) => {
-	if (data <= 0) return (books = {})
+	if (data.length <= 0) return (books = {})
 	books = {}
 	for (let item of data) {
 		books[item.file_id] = item.book_name
@@ -344,24 +344,24 @@ bot.onText(/\/start/, async (message) => {
 	await getUsersFromDB()
 	let chatID = message.chat.id
 	let startInfo =
-		'Данный бот создавался для удобства, ведь в группе для "очень важной" информации уже месиво какое-то из вообще всего.\
-      \n\nВы можете поменять группу по иностранному языку, чтобы Вам отображалась домашние задания только Вашей группы (Если она есть в базе данных).\
-      \n\nТак же можете просматривать всё домашнее задание, имеющееся в базе данных \
-      (Домашние задания хранятся в боте вплоть до 30 дней после дедлайна, после чего удаляются. Старое дз находится в "архиве" при опции просмотра дз).\
-      \n\nПри добавлении нового домашнего задания, всем, кто хоть раз активировал бота, придет сообщение об этом. \
-      Его можно отключить нажав на кнопку "Разное" под полем ввода сообщения, после - "Настройка получения уведомлений о добавлении нового дз".\
-       Ну или просто замутить бота.\n\nЕжедневно в 14:00-14:05 минут будет приходить напоминание со списком домашнего задания на завтра.\
-       \n\nЕсли бот по каким-либо причинам либо ошибкам упал/умер/перестал работать, то увы (я обязательно узнаю об этом...)\
-       \nА ещё не забудьте выбрать группу по английскому (Профиль -> Выбрать группу по англу), чтобы вам приходила ваша домашка, если она есть.'
+		'Данный бот создавался для удобства, ведь в группе для "очень важной" информации уже месиво какое-то из вообще всего. \
+\n\nВы можете поменять группу по иностранному языку, чтобы Вам отображалась домашние задания только Вашей группы (Если она есть в базе данных). \
+\n\nТак же можете просматривать всё домашнее задание, имеющееся в базе данных \
+(Домашние задания хранятся в боте вплоть до 30 дней после дедлайна, после чего удаляются. Старое дз находится в "архиве" при опции просмотра дз). \
+\n\nПри добавлении нового домашнего задания, всем, кто хоть раз активировал бота, придет сообщение об этом. \
+Его можно отключить нажав на кнопку "Разное" под полем ввода сообщения, после - "Настройка получения уведомлений о добавлении нового дз". \
+Ну или просто замутить бота.\n\nЕжедневно в 14:00-14:05 минут будет приходить напоминание со списком домашнего задания на завтра. \
+\n\nЕсли бот по каким-либо причинам либо ошибкам упал/умер/перестал работать, то прошу сообщить об этом либо старосте либо в чатик написать наш. \
+\nА ещё не забудьте выбрать группу по английскому (Профиль -> Выбрать группу по англу), чтобы вам приходила ваша домашка, если она есть.'
 	let adminInfo =
-		'А теперь, именно <i>Вы</i> обладаете властью над базой данных домашних заданий.\
-      \n<i>Вы</i> можете добавлять, изменять (только текст и дедлайн) и удалять домашние задания из бота.\
-       Прошу обратить внимание на <i>Вашу</i> группу по английскому, перед добавлением домашнего задания по этой дисциплине, \
-       необходимо, чтобы домашнее задание начальной группы было у начальной группы, а не у средней или крутой\
-        (Это касается только иностранного языка, пока что).\n\nНемного про иерархию:  \
-        4 - глав. админ. Вселенская власть. 3 - админ, имеющий доступ ко всем дисциплинам. 2 - админ, имеющий доступ только к\
-         дисциплинам, которые делятся на группы (Н-р, Английский язык)\n\nДедлайн дз автоматически ставится взависимости от расписания,\
-          дисциплины и её "типа" (практика, лекция, лабы).'
+		'А теперь, именно <i>Вы</i> обладаете властью над базой данных домашних заданий. \
+\n<i>Вы</i> можете добавлять, изменять (только текст и дедлайн) и удалять домашние задания из бота. \
+Прошу обратить внимание на <i>Вашу</i> группу по английскому, перед добавлением домашнего задания по этой дисциплине, \
+необходимо, чтобы домашнее задание начальной группы было у начальной группы, а не у средней или крутой \
+(Это касается только иностранного языка, пока что).\n\nНемного про иерархию:  \
+4 - глав. админ. Вселенская власть. 3 - админ, имеющий доступ ко всем дисциплинам. 2 - админ, имеющий доступ только к \
+дисциплинам, которые делятся на группы (Н-р, Английский язык)\n\nДедлайн дз автоматически ставится взависимости от расписания, \
+дисциплины и её "типа" (практика, лекция, лабы).'
 	if (!(chatID in chats)) {
 		await db.run(
 			"INSERT INTO student(student_id,student_nickname,student_permission,student_english) VALUES (?,?,(SELECT permission_id FROM permission WHERE permission_title = ?),?)",
@@ -822,6 +822,7 @@ bot.on("message", async (message) => {
 			try {
 				let tempDeadline = message.text.match(/(\d{2})\.(\d{2})\.(\d{4})/)
 				pool[chatID].tempTask.homework_deadline = new Date(`${tempDeadline[3]}-${tempDeadline[2]}-${tempDeadline[1]}`)
+				pool[chatID].tempTask.homework_creator = chatID
 
 				if (!(pool[chatID].tempTask.homework_deadline > new Date()))
 					return await bot.sendMessage(chatID, "Ввод уже прошедшего времени невозможен. Пожалуйста, введите дедлайн корректно.")
@@ -845,11 +846,11 @@ bot.on("message", async (message) => {
 						console.log("737 line. Inserting homework via custom deadline")
 					}
 				)
-
+				await getHomeworkFromDB()
 				if (pool[chatID].tempTask.homework_files) {
 					db.run(
 						"INSERT INTO file(file_type, file_name) VALUES (?,?)",
-						[pool[chatID].tempTask.homework_files.type, pool[chatID].tempTask.homework_files.arr[0].file_id],
+						[pool[chatID].tempTask.homework_files.type, pool[chatID].tempTask.homework_files.arr[0]],
 						(err) => {
 							if (err) {
 								console.log("747 line")
@@ -859,8 +860,15 @@ bot.on("message", async (message) => {
 						}
 					)
 					db.run(
-						"INSERT INTO homework_has_file VALUES((SELECT homework_id FROM homework WHERE homework_text=?),(SELECT file_id FROM file WHERE file_name=?))",
-						[pool[chatID].tempTask.homework_text, pool[chatID].tempTask.homework_files.arr[0]],
+						"INSERT INTO homework_has_file(homework_id,file_id) VALUES((SELECT homework_id FROM homework WHERE homework_text=? AND homework_deadline=? AND homework_lesson=? AND homework_type=? AND homework_creator=?),(SELECT file_id FROM file WHERE file_name=?))",
+						[
+							pool[chatID].tempTask.homework_text,
+							pool[chatID].tempTask.homework_deadline,
+							pool[chatID].tempTask.homework_lesson,
+							pool[chatID].tempTask.homework_type,
+							pool[chatID].tempTask.homework_creator,
+							pool[chatID].tempTask.homework_files.arr[0],
+						],
 						(err) => {
 							if (err) {
 								console.log("758 line")
@@ -876,6 +884,9 @@ bot.on("message", async (message) => {
 						keyboard: chats[chatID].permission_title == "basic" ? menus().basic : menus().extended,
 					},
 				})
+				await getHomeworkFromDB()
+				await getHomeworkWithFileFromDB()
+				await getFileFromDB()
 				for (let chat of Object.keys(chats)) {
 					if (
 						+chat != chatID &&
@@ -885,20 +896,102 @@ bot.on("message", async (message) => {
 							chats[chat].permission_title == "senior")
 					) {
 						try {
-							await bot.sendMessage(
-								+chat,
-								"Было добавлено новое домашнее задание:\n" +
-									buildHomeworkMessage([pool[chatID].tempTask], pool[chatID].tempTask.homework_lesson, chats[chat]),
-								{ parse_mode: "HTML" }
-							)
+							await bot.sendMessage(+chat, "Было добавлено новое домашнее задание:\n")
+
+							let hw = homework[pool[chatID].tempTask.homework_lesson][homework[pool[chatID].tempTask.homework_lesson].length - 1]
+							let hwText = buildHomeworkMessage(hw, chats[chatID])
+
+							let filesForSending = []
+							if (homeworkWithFiles[hw.homework_id]) {
+								for (let fileID of homeworkWithFiles[hw.homework_id]) {
+									if (!files[fileID]) return
+									filesForSending.push(files[fileID])
+								}
+							}
+
+							if (filesForSending.length == 0) {
+								await bot.sendMessage(chatID, hwText, {
+									parse_mode: "HTML",
+								})
+							}
+
+							if (filesForSending.length == 1) {
+								if (filesForSending[0].file_type == "document") {
+									if (hwText.length <= 1024) {
+										await bot.sendDocument(chatID, filesForSending[0].file_name, {
+											caption: hwText,
+											parse_mode: "HTML",
+										})
+									} else {
+										await bot.sendMessage(chatID, hwText + "\n&#9660; Документ к дз снизу &#9660;", {
+											parse_mode: "HTML",
+										})
+										await bot.sendDocument(chatID, filesForSending[0].file_name)
+									}
+								}
+								if (filesForSending[0].file_type == "photo") {
+									if (hwText.length <= 1024) {
+										await bot.sendPhoto(chatID, filesForSending[0].file_name, {
+											caption: hwText,
+											parse_mode: "HTML",
+										})
+									} else {
+										await bot.sendMessage(chatID, hwText + "\n&#9660; Фото к дз снизу &#9660;", {
+											parse_mode: "HTML",
+										})
+										await bot.sendPhoto(chatID, filesForSending[0].file_name)
+									}
+								}
+							}
+							if (filesForSending.length > 1) {
+								let photos = []
+								let docs = []
+								let flag = false
+								for (let item of filesForSending) {
+									if (item.file_type == "document")
+										docs.push({
+											type: "document",
+											media: item.file_name,
+										})
+									if (item.file_type == "photo")
+										photos.push({
+											type: "photo",
+											media: item.file_name,
+										})
+								}
+								if (photos.length > 0) {
+									if (hwText.length <= 990) {
+										photos[0].caption = "\n&#9660; Файлы к дз снизу &#9660;\n" + hwText
+										photos[0].parse_mode = "HTML"
+										await bot.sendMediaGroup(chatID, photos)
+										flag = true
+									} else {
+										await bot.sendMessage(chatID, hwText, {
+											parse_mode: "HTML",
+										})
+										await bot.sendMediaGroup(chatID, photos)
+									}
+								}
+								if (docs.length > 0) {
+									if (!flag && hwText.length <= 990) {
+										docs[0].caption = hwText
+										docs[0].parse_mode = "HTML"
+										await bot.sendMediaGroup(chatID, docs)
+									} else if (flag) {
+										docs[0].caption = "&#9650; Файлы к дз, что выше &#9650;"
+										docs[0].parse_mode = "HTML"
+										await bot.sendMediaGroup(chatID, docs)
+									}
+								}
+							}
 						} catch (error) {
 							if (error.response.body.description == "Bad Request: chat not found") {
 								await db.run("DELETE FROM student WHERE student_id=? ", [chat], (err) => {
 									if (err) {
-										console.log("790 line")
+										console.log("1640 line")
 										return console.error(err)
 									}
-									console.log("793 line. Deleting student bc error")
+									console.log("1643 line. Deleting student bc error")
 								})
 							}
 						}
@@ -1748,7 +1841,13 @@ bot.on("callback_query", async (message) => {
 	}
 	if (data.target == "addDeadline") {
 		if (chats[chatID].permission_title == "basic") return
-		if (!(pool[chatID]?.tempTask?.homework_text && pool[chatID].tempTask.homework_lesson && pool[chatID].tempTask.homework_type)) {
+		if (
+			!(
+				(pool[chatID]?.tempTask?.homework_text || pool[chatID]?.tempTask?.homework_files) &&
+				pool[chatID].tempTask.homework_lesson &&
+				pool[chatID].tempTask.homework_type
+			)
+		) {
 			return await bot.sendMessage(chatID, "Домашнее задание заполнено некорректно. Начните сначала.")
 		}
 
@@ -1796,8 +1895,9 @@ bot.on("callback_query", async (message) => {
 					console.log(`1503 line. ${chatID} Inserting homework`)
 				}
 			)
-
+			console.log(pool[chatID].tempTask)
 			if (pool[chatID].tempTask.homework_files) {
+				console.log(1807)
 				db.run(
 					"INSERT INTO file(file_type, file_name) VALUES (?,?)",
 					[pool[chatID].tempTask.homework_files.type, pool[chatID].tempTask.homework_files.arr[0]],
@@ -1810,8 +1910,15 @@ bot.on("callback_query", async (message) => {
 					}
 				)
 				db.run(
-					"INSERT INTO homework_has_file VALUES((SELECT homework_id FROM homework WHERE homework_text=?),(SELECT file_id FROM file WHERE file_name=?))",
-					[pool[chatID].tempTask.homework_text, pool[chatID].tempTask.homework_files.arr[0]],
+					"INSERT INTO homework_has_file(homework_id,file_id) VALUES((SELECT homework_id FROM homework WHERE homework_text=? AND homework_deadline=? AND homework_lesson=? AND homework_type=? AND homework_creator=?),(SELECT file_id FROM file WHERE file_name=?))",
+					[
+						pool[chatID].tempTask.homework_text,
+						pool[chatID].tempTask.homework_deadline,
+						pool[chatID].tempTask.homework_lesson,
+						pool[chatID].tempTask.homework_type,
+						pool[chatID].tempTask.homework_creator,
+						pool[chatID].tempTask.homework_files.arr[0],
+					],
 					(err) => {
 						if (err) {
 							console.log("1524 line")
@@ -1827,7 +1934,9 @@ bot.on("callback_query", async (message) => {
 					keyboard: menus()[chats[chatID].permission_title],
 				},
 			})
-
+			await getHomeworkFromDB()
+			await getHomeworkWithFileFromDB()
+			await getFileFromDB()
 			for (let chat of Object.keys(chats)) {
 				if (
 					+chat != chatID &&
@@ -1838,7 +1947,8 @@ bot.on("callback_query", async (message) => {
 				) {
 					try {
 						await bot.sendMessage(+chat, "Было добавлено новое домашнее задание:\n")
-						let hw = pool[chatID].tempTask
+
+						let hw = homework[pool[chatID].tempTask.homework_lesson][homework[pool[chatID].tempTask.homework_lesson].length - 1]
 						let hwText = buildHomeworkMessage(hw, chats[chatID])
 
 						let filesForSending = []
@@ -1849,14 +1959,12 @@ bot.on("callback_query", async (message) => {
 							}
 						}
 
-						await bot.sendMessage(chatID, hwText, {
-							parse_mode: "HTML",
-						})
 						if (filesForSending.length == 0) {
 							await bot.sendMessage(chatID, hwText, {
 								parse_mode: "HTML",
 							})
 						}
+
 						if (filesForSending.length == 1) {
 							if (filesForSending[0].file_type == "document") {
 								if (hwText.length <= 1024) {
@@ -1972,7 +2080,7 @@ bot.on("callback_query", async (message) => {
 				resetUserInput(chatID)
 			}
 		} else {
-			await bot.sendMessage(chatID, "Введи новый текст для:\n" + buildHomeworkMessage([taskForEdit], taskForEdit.homework_lesson, chats[chatID]), {
+			await bot.sendMessage(chatID, "Введи новый текст для:\n" + buildHomeworkMessage(taskForEdit, chats[chatID]), {
 				parse_mode: "HTML",
 			})
 			bot.answerCallbackQuery(message.id)
