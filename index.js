@@ -889,7 +889,6 @@ bot.on("message", async (message) => {
 				await getFileFromDB()
 				for (let chat of Object.keys(chats)) {
 					if (
-						+chat != chatID &&
 						chats[chat].student_notification &&
 						(chats[chat].student_english == pool[chatID].tempTask.homework_english_group ||
 							pool[chatID].tempTask.homework_english_group == 0 ||
@@ -897,10 +896,8 @@ bot.on("message", async (message) => {
 					) {
 						try {
 							await bot.sendMessage(+chat, "Было добавлено новое домашнее задание:\n")
-
 							let hw = homework[pool[chatID].tempTask.homework_lesson][homework[pool[chatID].tempTask.homework_lesson].length - 1]
-							let hwText = buildHomeworkMessage(hw, chats[chatID])
-
+							let hwText = `${hw.homework_lesson}\n` + buildHomeworkMessage(hw, chats[chat])
 							let filesForSending = []
 							if (homeworkWithFiles[hw.homework_id]) {
 								for (let fileID of homeworkWithFiles[hw.homework_id]) {
@@ -910,7 +907,7 @@ bot.on("message", async (message) => {
 							}
 
 							if (filesForSending.length == 0) {
-								await bot.sendMessage(chatID, hwText, {
+								await bot.sendMessage(chat, hwText, {
 									parse_mode: "HTML",
 								})
 							}
@@ -918,28 +915,28 @@ bot.on("message", async (message) => {
 							if (filesForSending.length == 1) {
 								if (filesForSending[0].file_type == "document") {
 									if (hwText.length <= 1024) {
-										await bot.sendDocument(chatID, filesForSending[0].file_name, {
+										await bot.sendDocument(chat, filesForSending[0].file_name, {
 											caption: hwText,
 											parse_mode: "HTML",
 										})
 									} else {
-										await bot.sendMessage(chatID, hwText + "\n&#9660; Документ к дз снизу &#9660;", {
+										await bot.sendMessage(chat, hwText + "\n&#9660; Документ к дз снизу &#9660;", {
 											parse_mode: "HTML",
 										})
-										await bot.sendDocument(chatID, filesForSending[0].file_name)
+										await bot.sendDocument(chat, filesForSending[0].file_name)
 									}
 								}
 								if (filesForSending[0].file_type == "photo") {
 									if (hwText.length <= 1024) {
-										await bot.sendPhoto(chatID, filesForSending[0].file_name, {
+										await bot.sendPhoto(chat, filesForSending[0].file_name, {
 											caption: hwText,
 											parse_mode: "HTML",
 										})
 									} else {
-										await bot.sendMessage(chatID, hwText + "\n&#9660; Фото к дз снизу &#9660;", {
+										await bot.sendMessage(chat, hwText + "\n&#9660; Фото к дз снизу &#9660;", {
 											parse_mode: "HTML",
 										})
-										await bot.sendPhoto(chatID, filesForSending[0].file_name)
+										await bot.sendPhoto(chat, filesForSending[0].file_name)
 									}
 								}
 							}
@@ -963,24 +960,24 @@ bot.on("message", async (message) => {
 									if (hwText.length <= 990) {
 										photos[0].caption = "\n&#9660; Файлы к дз снизу &#9660;\n" + hwText
 										photos[0].parse_mode = "HTML"
-										await bot.sendMediaGroup(chatID, photos)
+										await bot.sendMediaGroup(chat, photos)
 										flag = true
 									} else {
-										await bot.sendMessage(chatID, hwText, {
+										await bot.sendMessage(chat, hwText, {
 											parse_mode: "HTML",
 										})
-										await bot.sendMediaGroup(chatID, photos)
+										await bot.sendMediaGroup(chat, photos)
 									}
 								}
 								if (docs.length > 0) {
 									if (!flag && hwText.length <= 990) {
 										docs[0].caption = hwText
 										docs[0].parse_mode = "HTML"
-										await bot.sendMediaGroup(chatID, docs)
+										await bot.sendMediaGroup(chat, docs)
 									} else if (flag) {
 										docs[0].caption = "&#9650; Файлы к дз, что выше &#9650;"
 										docs[0].parse_mode = "HTML"
-										await bot.sendMediaGroup(chatID, docs)
+										await bot.sendMediaGroup(chat, docs)
 									}
 								}
 							}
@@ -997,9 +994,7 @@ bot.on("message", async (message) => {
 						}
 					}
 				}
-				if (pool[chatID]) {
-					resetUserInput(chatID)
-				}
+				resetUserInput(chatID)
 				resetTempTask(chatID)
 			} catch (error) {
 				await bot.sendMessage(
@@ -1873,7 +1868,7 @@ bot.on("callback_query", async (message) => {
 			bot.answerCallbackQuery(message.id)
 		} else {
 			await getUsersFromDB()
-			pool[chatID].tempTask.homework_english_group = chats[chatID].student_english
+			pool[chatID].tempTask.homework_english_group = pool[chatID].tempTask.homework_lesson == "Иностранный язык" ? chats[chatID].student_english : 0
 			pool[chatID].tempTask.homework_creator = chatID
 			pool[chatID].tempTask.homework_deadline = 0
 			setDeadline(parseLessonsForDays(APIData), pool[chatID].tempTask, getEvennessOfWeek())
@@ -1939,7 +1934,6 @@ bot.on("callback_query", async (message) => {
 			await getFileFromDB()
 			for (let chat of Object.keys(chats)) {
 				if (
-					+chat != chatID &&
 					chats[chat].student_notification &&
 					(chats[chat].student_english == pool[chatID].tempTask.homework_english_group ||
 						pool[chatID].tempTask.homework_english_group == 0 ||
@@ -1947,10 +1941,8 @@ bot.on("callback_query", async (message) => {
 				) {
 					try {
 						await bot.sendMessage(+chat, "Было добавлено новое домашнее задание:\n")
-
 						let hw = homework[pool[chatID].tempTask.homework_lesson][homework[pool[chatID].tempTask.homework_lesson].length - 1]
-						let hwText = buildHomeworkMessage(hw, chats[chatID])
-
+						let hwText = `${hw.homework_lesson}\n` + buildHomeworkMessage(hw, chats[chat])
 						let filesForSending = []
 						if (homeworkWithFiles[hw.homework_id]) {
 							for (let fileID of homeworkWithFiles[hw.homework_id]) {
@@ -1960,7 +1952,7 @@ bot.on("callback_query", async (message) => {
 						}
 
 						if (filesForSending.length == 0) {
-							await bot.sendMessage(chatID, hwText, {
+							await bot.sendMessage(chat, hwText, {
 								parse_mode: "HTML",
 							})
 						}
@@ -1968,28 +1960,28 @@ bot.on("callback_query", async (message) => {
 						if (filesForSending.length == 1) {
 							if (filesForSending[0].file_type == "document") {
 								if (hwText.length <= 1024) {
-									await bot.sendDocument(chatID, filesForSending[0].file_name, {
+									await bot.sendDocument(chat, filesForSending[0].file_name, {
 										caption: hwText,
 										parse_mode: "HTML",
 									})
 								} else {
-									await bot.sendMessage(chatID, hwText + "\n&#9660; Документ к дз снизу &#9660;", {
+									await bot.sendMessage(chat, hwText + "\n&#9660; Документ к дз снизу &#9660;", {
 										parse_mode: "HTML",
 									})
-									await bot.sendDocument(chatID, filesForSending[0].file_name)
+									await bot.sendDocument(chat, filesForSending[0].file_name)
 								}
 							}
 							if (filesForSending[0].file_type == "photo") {
 								if (hwText.length <= 1024) {
-									await bot.sendPhoto(chatID, filesForSending[0].file_name, {
+									await bot.sendPhoto(chat, filesForSending[0].file_name, {
 										caption: hwText,
 										parse_mode: "HTML",
 									})
 								} else {
-									await bot.sendMessage(chatID, hwText + "\n&#9660; Фото к дз снизу &#9660;", {
+									await bot.sendMessage(chat, hwText + "\n&#9660; Фото к дз снизу &#9660;", {
 										parse_mode: "HTML",
 									})
-									await bot.sendPhoto(chatID, filesForSending[0].file_name)
+									await bot.sendPhoto(chat, filesForSending[0].file_name)
 								}
 							}
 						}
@@ -2013,24 +2005,24 @@ bot.on("callback_query", async (message) => {
 								if (hwText.length <= 990) {
 									photos[0].caption = "\n&#9660; Файлы к дз снизу &#9660;\n" + hwText
 									photos[0].parse_mode = "HTML"
-									await bot.sendMediaGroup(chatID, photos)
+									await bot.sendMediaGroup(chat, photos)
 									flag = true
 								} else {
-									await bot.sendMessage(chatID, hwText, {
+									await bot.sendMessage(chat, hwText, {
 										parse_mode: "HTML",
 									})
-									await bot.sendMediaGroup(chatID, photos)
+									await bot.sendMediaGroup(chat, photos)
 								}
 							}
 							if (docs.length > 0) {
 								if (!flag && hwText.length <= 990) {
 									docs[0].caption = hwText
 									docs[0].parse_mode = "HTML"
-									await bot.sendMediaGroup(chatID, docs)
+									await bot.sendMediaGroup(chat, docs)
 								} else if (flag) {
 									docs[0].caption = "&#9650; Файлы к дз, что выше &#9650;"
 									docs[0].parse_mode = "HTML"
-									await bot.sendMediaGroup(chatID, docs)
+									await bot.sendMediaGroup(chat, docs)
 								}
 							}
 						}
