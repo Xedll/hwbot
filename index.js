@@ -420,7 +420,14 @@ bot.onText(/\/start/, async (message) => {
 bot.onText(/Пользователи/, async (message) => {
 	await getUsersFromDB()
 	let chatID = message.chat.id
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	if (chats[chatID].permission_title != "senior") return
 	db.all("SELECT * FROM student", [], async (err, data) => {
 		if (err) return console.error(err)
@@ -437,7 +444,14 @@ bot.onText(/Пользователи/, async (message) => {
 bot.onText(/Разное/, async (message) => {
 	await getUsersFromDB()
 	let chatID = message.chat.id
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	await bot.sendMessage(chatID, "Что делаем?", {
 		reply_markup: {
 			keyboard: menus()["разное"][chats[chatID].permission_title],
@@ -447,7 +461,14 @@ bot.onText(/Разное/, async (message) => {
 bot.onText(/Редактирование домашнего задания/, async (message) => {
 	await getUsersFromDB()
 	let chatID = message.chat.id
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	await bot.sendMessage(chatID, "Что делаем?", {
 		reply_markup: {
 			keyboard: menus()["Работа с домашним заданием"].basic,
@@ -457,7 +478,14 @@ bot.onText(/Редактирование домашнего задания/, asy
 bot.onText(/Посмотреть дз/, async (message) => {
 	await getUsersFromDB()
 	let chatID = message.chat.id
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	await bot.sendMessage(chatID, "По чему смотрим дз?", {
 		reply_markup: JSON.stringify({
 			inline_keyboard: [
@@ -497,7 +525,14 @@ bot.onText(/Посмотреть дз/, async (message) => {
 bot.onText(/Выбрать группу по Английскому Языку/, async (message) => {
 	await getUsersFromDB()
 	let chatID = message.chat.id
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	await bot.sendMessage(chatID, "Для начала введи в какой группе по английскому ты находишься (1 - начальная / 2 - средняя / 3 - сильная):", {
 		reply_markup: JSON.stringify({
 			inline_keyboard: [
@@ -539,7 +574,14 @@ bot.onText(/Выбрать группу по Английскому Языку/,
 bot.onText(/Назад/, async (message) => {
 	await getUsersFromDB()
 	let chatID = message.chat.id
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	await bot.sendMessage(chatID, "Что делаем?", {
 		reply_markup: {
 			keyboard: chats[chatID].permission_title == "basic" ? menus().basic : menus().extended,
@@ -553,7 +595,14 @@ bot.onText(/Назад/, async (message) => {
 bot.onText(/Профиль/, async (message) => {
 	await getUsersFromDB()
 	let chatID = message.chat.id
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	await getUsersFromDB()
 	await bot.sendMessage(
 		chatID,
@@ -571,7 +620,14 @@ bot.onText(/Профиль/, async (message) => {
 bot.onText(/Настройка получения уведомлений о добавлении нового дз/, async (message) => {
 	await getUsersFromDB()
 	let chatID = message.chat.id
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	await bot.sendMessage(
 		chatID,
 		`В данный момент получение уведомления о добавлении нового домашнего задания ${
@@ -593,7 +649,14 @@ bot.onText(/Настройка получения уведомлений о до
 bot.onText(/Добавить домашнее задание/, async (message) => {
 	await getUsersFromDB()
 	let chatID = message.chat.id
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	if (chats[chatID].permission_title == "basic") return
 	await bot.sendMessage(chatID, "По какой дисциплине добавляем дз?", {
 		reply_markup: {
@@ -605,7 +668,14 @@ bot.onText(/Добавить домашнее задание/, async (message) =
 bot.onText(/Изменить домашнее задание/, async (message) => {
 	await getUsersFromDB()
 	let chatID = message.chat.id
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	if (chats[chatID].permission_title == "basic") return
 	await bot.sendMessage(chatID, "Введи айди дз, которое Вы хотите изменить.")
 	if (pool[chatID]) {
@@ -618,7 +688,14 @@ bot.onText(/Изменить домашнее задание/, async (message) =
 bot.onText(/Удалить домашнее задание/, async (message) => {
 	await getUsersFromDB()
 	let chatID = message.chat.id
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	if (chats[chatID].permission_title == "basic") return
 	await bot.sendMessage(chatID, "Введи айди дз, которое Вы хотите удалить.")
 	if (pool[chatID]) {
@@ -631,7 +708,14 @@ bot.onText(/Удалить домашнее задание/, async (message) => 
 bot.onText(/Действия с админами/, async (message) => {
 	await getUsersFromDB()
 	let chatID = message.chat.id
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	if (chats[chatID].permission_title != "senior") return
 
 	await bot.sendMessage(chatID, "Что делаем?", {
@@ -643,7 +727,14 @@ bot.onText(/Действия с админами/, async (message) => {
 
 bot.onText(/Изменить права юзеру/, async (message) => {
 	let chatID = message.chat.id
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	if (chats[chatID].permission_title != "senior") return
 	await getUsersFromDB()
 	let userList = ""
@@ -668,7 +759,14 @@ bot.onText(/Учебники/, async (message) => {
 	await getBooksFromDB()
 	await getFileFromDB()
 	let chatID = message.chat.id
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	if (Object.keys(books).length < 1) return await bot.sendMessage(chatID, "Учебников нет.")
 	for (let book of Object.keys(books)) {
 		await bot.sendDocument(chatID, files[book].file_name, {
@@ -681,7 +779,14 @@ bot.onText(/Учебники/, async (message) => {
 bot.onText(/Редактирование учебников/, async (message) => {
 	let chatID = message.chat.id
 	await getUsersFromDB()
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	if (chats[chatID].permission_title != "senior") return
 	await bot.sendMessage(chatID, "Что делаем?", { reply_markup: { keyboard: [["Добавить учебник"], ["Удалить учебник"], ["Изменить учебник"], ["Назад"]] } })
 })
@@ -689,7 +794,14 @@ bot.onText(/Редактирование учебников/, async (message) =>
 bot.onText(/Изменить учебник/, async (message) => {
 	let chatID = message.chat.id
 	await getUsersFromDB()
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	if (chats[chatID].permission_title != "senior") return
 	await getBooksFromDB()
 	if (Object.keys(books) < 1) return await bot.sendMessage(chatID, "В базе данных отсутствуют учебники для редактирования")
@@ -711,7 +823,14 @@ bot.onText(/Изменить учебник/, async (message) => {
 bot.onText(/Добавить учебник/, async (message) => {
 	let chatID = message.chat.id
 	await getUsersFromDB()
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	if (chats[chatID].permission_title != "senior") return
 	await bot.sendMessage(chatID, "Отправьте документ с названием учебника в одном сообщении")
 	if (pool[chatID]) {
@@ -726,7 +845,14 @@ bot.onText(/Добавить учебник/, async (message) => {
 bot.onText(/Удалить учебник/, async (message) => {
 	let chatID = message.chat.id
 	await getUsersFromDB()
-	if (!(chatID in chats)) return
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
 	if (chats[chatID].permission_title != "senior") return
 	await getBooksFromDB()
 	if (Object.keys(books) < 1) return await bot.sendMessage(chatID, "В базе данных отсутствуют учебники для редактирования")
