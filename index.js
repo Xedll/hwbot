@@ -193,6 +193,7 @@ setInterval(async () => {
 					for (let lesson of Object.keys(homeworkForTomorrow)) {
 						if (lesson == "Иностранный язык") {
 							let tempArray = []
+							if (!homeworkForTomorrow[lesson]) return
 							for (let item of homeworkForTomorrow[lesson]) {
 								if (item.homework_english_group == chats[chatID].student_english) {
 									tempArray.push(item)
@@ -1499,6 +1500,7 @@ bot.on("callback_query", async (message) => {
 			for (let lesson of Object.keys(actualHomework)) {
 				if (lesson == "Иностранный язык") {
 					let tempArray = []
+					if (!actualHomework[lesson]) return
 					for (let item of actualHomework[lesson]) {
 						if (item.homework_english_group == chats[chatID].student_english) {
 							tempArray.push(item)
@@ -1617,6 +1619,7 @@ bot.on("callback_query", async (message) => {
 
 			for (let lesson of Object.keys(homeworkForTomorrow)) {
 				if (lesson == "Иностранный язык") {
+					if (!homeworkForTomorrow[lesson]) return
 					let tempArray = []
 					for (let item of homeworkForTomorrow[lesson]) {
 						if (item.homework_english_group == chats[chatID].student_english) {
@@ -1739,6 +1742,7 @@ bot.on("callback_query", async (message) => {
 			for (let lesson of Object.keys(archiveHomework)) {
 				if (lesson == "Иностранный язык") {
 					let tempArray = []
+					if (!archiveHomework[lesson]) return
 					for (let item of archiveHomework[lesson]) {
 						if (item.homework_english_group == chats[chatID].student_english) {
 							tempArray.push(item)
@@ -1857,6 +1861,7 @@ bot.on("callback_query", async (message) => {
 			let actualHomework = getHomeworkArray(homework, 0, { mode: "ahead" })
 			if (Object.keys(lessons)[data.lesson] == "Иностранный язык") {
 				let tempArray = []
+				if (!actualHomework[Object.keys(lessons)[data.lesson]]) return
 				for (let item of actualHomework[Object.keys(lessons)[data.lesson]]) {
 					if (item.homework_english_group == chats[chatID].student_english) {
 						tempArray.push(item)
