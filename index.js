@@ -344,7 +344,7 @@ setInterval(async () => {
 		await axios
 			.post(
 				"https://kai.ru/raspisanie?p_p_id=pubStudentSchedule_WAR_publicStudentSchedule10&p_p_lifecycle=2&p_p_resource_id=schedule",
-				{ groupId: "25212" },
+				{ groupId: "26022" },
 				{
 					headers: {
 						"content-type": "application/x-www-form-urlencoded",
@@ -352,8 +352,8 @@ setInterval(async () => {
 				}
 			)
 			.then(async (response) => {
-				await fs.writeFileSync("./options/vuzapi.json", JSON.stringify(response.data))
-				await fs.writeFileSync("./options/lessons.json", JSON.stringify(getListOfLessons(response.data)))
+				fs.writeFileSync(__dirname + "/options/vuzapi.json", JSON.stringify(response.data), { flag: "w+" })
+				fs.writeFileSync(__dirname + "/options/lessons.json", JSON.stringify(getListOfLessons(response.data)), { flag: "w+" })
 			})
 	}
 }, 300_000)
