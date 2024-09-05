@@ -29,6 +29,7 @@ module.exports = function setDateForLessonHomework(splitLessons, lessonHomework,
 		numberOfLessonsInDay = splitLessons[currentTypeWeek][curretnDay].length
 
 		for (let j = 0; j < numberOfLessonsInDay; j++) {
+			if (!splitLessons[currentTypeWeek][curretnDay]) continue
 			equalLessonName = lessonHomework.homework_lesson === splitLessons[currentTypeWeek][curretnDay][j].name
 			equalLessonType = lessonHomework.homework_type === splitLessons[currentTypeWeek][curretnDay][j].type
 

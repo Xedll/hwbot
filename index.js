@@ -30,6 +30,8 @@ let files = {}
 let pool = {}
 let books = {}
 let homeworkWithFiles = {}
+let groupNum = undefined || 4201
+let groupApiID = undefined || 26022
 
 const db = new sqlite3.Database(path.resolve(__dirname, "../db/homework.db"), sqlite3.OPEN_READWRITE, (err) => {
 	if (err) console.error(err)
@@ -208,6 +210,7 @@ setInterval(async () => {
 						Object.keys(homeworkForTomorrow)[0] == "Иностранный язык" &&
 						homeworkForTomorrow["Иностранный язык"].length < 1
 					) {
+						console.log(true)
 						continue
 					}
 					await bot.sendMessage(chatID, "#завтра")
@@ -340,11 +343,15 @@ setInterval(async () => {
 			}
 		}
 		await getHomeworkFromDB()
-
+		await axios
+			.post(
+				`https://kai.ru/raspisanie?p_p_id=pubStudentSchedule_WAR_publicStudentSchedule10&p_p_lifecycle=2&p_p_resource_id=getGroupsURL&query=${groupNum}`
+			)
+			.then((data) => (groupApiID = data.data[0].id)) //!Доделать получение айди группы и проверить (все остальное готово)
 		await axios
 			.post(
 				"https://kai.ru/raspisanie?p_p_id=pubStudentSchedule_WAR_publicStudentSchedule10&p_p_lifecycle=2&p_p_resource_id=schedule",
-				{ groupId: "26022" },
+				{ groupId: groupApiID },
 				{
 					headers: {
 						"content-type": "application/x-www-form-urlencoded",
@@ -752,6 +759,28 @@ bot.onText(/Изменить права юзеру/, async (message) => {
 			target: "editPermission",
 			creator: chatID,
 			data: message.text,
+		}
+	}
+})
+bot.onText(/Ввести новый номер группы/, async (message) => {
+	let chatID = message.chat.id
+	if (!(chatID in chats)) {
+		await bot.sendMessage(chatID, "Пожалуйста, пропишите /start для началы пользования ботом.", {
+			reply_markup: JSON.stringify({
+				remove_keyboard: true,
+			}),
+		})
+		return
+	}
+	if (chats[chatID].permission_title != "senior") return
+	await getUsersFromDB()
+	await bot.sendMessage(chatID, "Пожалуйста, введите новый номер группы.")
+	if (pool[chatID]) {
+		pool[chatID].target = "editGroupNum"
+	} else {
+		pool[chatID] = {
+			target: "editGroupNum",
+			creator: chatID,
 		}
 	}
 })
@@ -1388,6 +1417,14 @@ bot.on("message", async (message) => {
 			await bot.sendMessage(chatID, "Документ был успешно добавлен.")
 			resetUserInput(chatID)
 			await getFileFromDB()
+		}
+		if (pool[chatID].target == "editGroupNum") {
+			groupNum = message.text
+			await bot.sendMessage(chatID, "Группа успешно изменена.", {
+				reply_markup: {
+					keyboard: chats[chatID].permission_title == "basic" ? menus().basic : menus().extended,
+				},
+			})
 		}
 		//!
 		if (pool[chatID].target == "editBooks") {
