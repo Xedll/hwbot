@@ -345,12 +345,12 @@ setInterval(async () => {
 		await getHomeworkFromDB()
 		await axios
 			.post(
-				`https://kai.ru/raspisanie?p_p_id=pubStudentSchedule_WAR_publicStudentSchedule10&p_p_lifecycle=2&p_p_resource_id=getGroupsURL&query=${groupNum}`
+				`https://kai.ru/raspisanie-pub?p_p_id=pubStudentSchedule_WAR_publicStudentSchedule10&p_p_lifecycle=2&p_p_resource_id=getGroupsURL&query=${groupNum}`
 			)
-			.then((data) => (groupApiID = data.data[0].id)) //!Доделать получение айди группы и проверить (все остальное готово)
+			.then((data) => (groupApiID = data.data[0].id))
 		await axios
 			.post(
-				"https://kai.ru/raspisanie?p_p_id=pubStudentSchedule_WAR_publicStudentSchedule10&p_p_lifecycle=2&p_p_resource_id=schedule",
+				"https://kai.ru/raspisanie-pub?p_p_id=pubStudentSchedule_WAR_publicStudentSchedule10&p_p_lifecycle=2&p_p_resource_id=schedule",
 				{ groupId: groupApiID },
 				{
 					headers: {
