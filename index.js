@@ -1898,7 +1898,10 @@ bot.on("callback_query", async (message) => {
 			let actualHomework = getHomeworkArray(homework, 0, { mode: "ahead" })
 			if (Object.keys(lessons)[data.lesson] == "Иностранный язык") {
 				let tempArray = []
-				if (!actualHomework[Object.keys(lessons)[data.lesson]]) return
+				if (!actualHomework[Object.keys(lessons)[data.lesson]]) {
+					bot.answerCallbackQuery(message.id)
+					return await bot.sendMessage(chatID, `Дз по дисциплине "${Object.keys(lessons)[data.lesson]}" нет`)
+				}
 				for (let item of actualHomework[Object.keys(lessons)[data.lesson]]) {
 					if (item.homework_english_group == chats[chatID].student_english) {
 						tempArray.push(item)
