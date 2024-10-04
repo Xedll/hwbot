@@ -192,17 +192,14 @@ setInterval(async () => {
 		if (homeworkForTomorrow) {
 			for (let chatID of Object.keys(chats)) {
 				try {
-					for (let lesson of Object.keys(homeworkForTomorrow)) {
-						if (lesson == "Иностранный язык") {
-							let tempArray = []
-							if (!homeworkForTomorrow[lesson]) return
-							for (let item of homeworkForTomorrow[lesson]) {
-								if (item.homework_english_group == chats[chatID].student_english) {
-									tempArray.push(item)
-								}
+					if (Object.keys(homeworkForTomorrow).includes("Иностранный язык")) {
+						let tempArray = []
+						for (let item of homeworkForTomorrow["Иностранный язык"]) {
+							if (item.homework_english_group == chats[chatID].student_english) {
+								tempArray.push(item)
 							}
-							homeworkForTomorrow[lesson] = tempArray
 						}
+						homeworkForTomorrow["Иностранный язык"] = tempArray
 					}
 
 					if (
@@ -210,14 +207,24 @@ setInterval(async () => {
 						Object.keys(homeworkForTomorrow)[0] == "Иностранный язык" &&
 						homeworkForTomorrow["Иностранный язык"].length < 1
 					) {
-						console.log(true)
 						continue
 					}
 					await bot.sendMessage(chatID, "#завтра")
 					for (let lesson of Object.keys(homeworkForTomorrow)) {
-						await bot.sendMessage(chatID, `Дз по дисциплине "<u>${lesson}</u>":`, {
-							parse_mode: "HTML",
-						})
+						let engFlag = false
+						if (lesson == "Иностранный язык") {
+							for (let item of homeworkForTomorrow[lesson]) {
+								if (item.homework_english_group === chats[chatID].student_english) {
+									engFlag = true
+								}
+							}
+						}
+
+						if ((engFlag && lesson == "Иностранный язык") || lesson != "Иностранный язык") {
+							await bot.sendMessage(chatID, `Дз по дисциплине "<u>${lesson}</u>":`, {
+								parse_mode: "HTML",
+							})
+						} else continue
 
 						for (let hw of homeworkForTomorrow[lesson]) {
 							if (
