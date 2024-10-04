@@ -26,7 +26,7 @@ module.exports = function setDateForLessonHomework(splitLessons, lessonHomework,
 	let lessonNotFound = true
 
 	while (lessonNotFound) {
-		numberOfLessonsInDay = splitLessons[currentTypeWeek][curretnDay].length || 0
+		numberOfLessonsInDay = splitLessons?.[currentTypeWeek]?.[curretnDay]?.length || 0
 
 		for (let j = 0; j < numberOfLessonsInDay; j++) {
 			if (!splitLessons[currentTypeWeek][curretnDay]) continue
