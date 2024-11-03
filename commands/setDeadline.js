@@ -1,58 +1,28 @@
 module.exports = function setDateForLessonHomework(splitLessons, lessonHomework, currentWeekNumber) {
-	const NUMBER_OF_DAYS_IN_WEEK = 7
-	const NEXT_DAY = 1
-
 	let deadlineDate = new Date()
-	deadlineDate.setDate(deadlineDate.getDate() + NEXT_DAY)
-
-	let curretnDay = deadlineDate.getDay()
-
-	let typesWeek = Object.keys(splitLessons)
-	let currentTypeWeek = typesWeek[+!currentWeekNumber]
-	let nextTypeWeek = 0
-
-	let numberOfTypesWeek = typesWeek.length
-	let numberOfStudyDays = Object.keys(splitLessons[currentTypeWeek]).length
-	let numberOfLessonsInDay = 0
-	let numberOfDaysOff = NUMBER_OF_DAYS_IN_WEEK - numberOfStudyDays
-
-	if (deadlineDate.getDay() == 0) {
-		deadlineDate.setDate(deadlineDate.getDate() + NEXT_DAY)
-		curretnDay++
-	}
-
-	let equalLessonName = false
-	let equalLessonType = false
-	let lessonNotFound = true
-
-	while (lessonNotFound) {
-		numberOfLessonsInDay = splitLessons?.[currentTypeWeek]?.[curretnDay]?.length || 0
-
-		for (let j = 0; j < numberOfLessonsInDay; j++) {
-			equalLessonName = lessonHomework.homework_lesson === splitLessons[currentTypeWeek][curretnDay][j].name
-			equalLessonType = lessonHomework.homework_type === splitLessons[currentTypeWeek][curretnDay][j].type
-
-			if (equalLessonName && equalLessonType) {
-				lessonNotFound = false
-
-				deadlineDate = new Date(deadlineDate)
+	let week_days = [7, 1, 2, 3, 4, 5, 6]
+	deadlineDate.setDate(deadlineDate.getDate() + 1)
+	currentDay = week_days[deadlineDate.getDay()]
+	let weekTypes = ["чет", "неч"]
+	let currWeek = currentDay == 1 ? +!currentWeekNumber : +currentWeekNumber
+	let lessonFinded = false
+	while (!lessonFinded) {
+		for (let i = 0; i < splitLessons[weekTypes[currWeek]][currentDay].length; i++) {
+			if (
+				lessonHomework.homework_lesson === splitLessons[weekTypes[currWeek]][currentDay][i].name &&
+				lessonHomework.homework_type === splitLessons[weekTypes[currWeek]][currentDay][i].type
+			) {
 				lessonHomework.homework_deadline = deadlineDate
+				lessonFinded = true
 				break
 			}
 		}
-
-		if (curretnDay >= numberOfStudyDays && lessonNotFound) {
-			currentWeekNumber++
-			nextTypeWeek = currentWeekNumber % numberOfTypesWeek
-
-			currentTypeWeek = typesWeek[nextTypeWeek]
-			curretnDay = 1
-
-			deadlineDate.setDate(deadlineDate.getDate() + NEXT_DAY + numberOfDaysOff)
-		} else if (lessonNotFound) {
-			curretnDay++
-			deadlineDate.setDate(deadlineDate.getDate() + NEXT_DAY)
+		if (lessonFinded) break
+		if (currentDay + 1 == 8) {
+			currWeek = +!Boolean(currWeek)
 		}
+		currentDay = currentDay + 1 == 8 ? 1 : currentDay + 1
+		deadlineDate.setDate(deadlineDate.getDate() + 1)
 	}
 	return lessonHomework
 }
