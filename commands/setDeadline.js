@@ -8,7 +8,7 @@ module.exports = function setDateForLessonHomework(splitLessons, lessonHomework,
 	let curretnDay = deadlineDate.getDay()
 
 	let typesWeek = Object.keys(splitLessons)
-	let currentTypeWeek = typesWeek[currentWeekNumber]
+	let currentTypeWeek = typesWeek[+!currentWeekNumber]
 	let nextTypeWeek = 0
 
 	let numberOfTypesWeek = typesWeek.length
@@ -29,7 +29,6 @@ module.exports = function setDateForLessonHomework(splitLessons, lessonHomework,
 		numberOfLessonsInDay = splitLessons?.[currentTypeWeek]?.[curretnDay]?.length || 0
 
 		for (let j = 0; j < numberOfLessonsInDay; j++) {
-			if (!splitLessons[currentTypeWeek][curretnDay]) continue
 			equalLessonName = lessonHomework.homework_lesson === splitLessons[currentTypeWeek][curretnDay][j].name
 			equalLessonType = lessonHomework.homework_type === splitLessons[currentTypeWeek][curretnDay][j].type
 

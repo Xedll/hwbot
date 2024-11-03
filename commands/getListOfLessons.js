@@ -1,13 +1,19 @@
 function getListOfLessons(schedule) {
 	let lessons = {}
-	let numberOfDays = Object.keys(schedule).length
-	for (let i = 1; i <= numberOfDays; i++) {
-		if (!schedule[i]) continue
-		let numberOfLessons = schedule[i].length
+
+	let namesDaysOfWeek = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+	let currentDayOfweek = ""
+
+	let numberOfDays = 7
+	console.log(schedule)
+	for (let i = 0; i < numberOfDays; i++) {
+		currentDayOfweek = namesDaysOfWeek[i]
+
+		let numberOfLessons = schedule.week_days[currentDayOfweek].length
 
 		for (let j = 0; j < numberOfLessons; j++) {
-			let lessonsName = schedule[i][j].disciplName.match(/(\S+)/g).join(" ")
-			let lessonType = schedule[i][j].disciplType.match(/(\S+)/g).join(" ")
+			let lessonsName = schedule.week_days[currentDayOfweek][j].discipline.name.match(/(\S+)/g).join(" ")
+			let lessonType = schedule.week_days[currentDayOfweek][j].original_lesson_type.match(/(\S+)/g).join(" ")
 
 			if (lessons[lessonsName] == undefined) {
 				Object.assign(lessons, { [lessonsName]: [] })
@@ -19,6 +25,8 @@ function getListOfLessons(schedule) {
 			}
 		}
 	}
+	console.log(lessons)
 	return lessons
 }
+
 module.exports = getListOfLessons

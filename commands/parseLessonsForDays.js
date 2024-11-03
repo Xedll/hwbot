@@ -1,10 +1,19 @@
 function parseLessonsForDays(schedule) {
-	let splitLessons
+	let splitLessons = []
 
-	let numberOfDays = Object.keys(schedule).length
+	let namesDaysOfWeek = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+	let currentDayOfweek = ""
+
+	let numberOfDays = 7
+	let numberOfLessons = 0
+
+	let forRealNumberOfDay = 1
+
+	let lessonInformation = {}
 
 	let firstKeyWordForWeek = "чет"
 	let secondKeyWordForWeek = "неч"
+	let keyWordInSchedule = ""
 
 	splitLessons = { [firstKeyWordForWeek]: {}, [secondKeyWordForWeek]: {} }
 
@@ -13,26 +22,27 @@ function parseLessonsForDays(schedule) {
 		Object.assign(splitLessons[secondKeyWordForWeek], { [i]: [] })
 	}
 
-	for (let i = 1; i <= numberOfDays; i++) {
-		if (!schedule[i]) continue
-		let numberOfLessons = schedule[i].length
+	for (let i = 0; i < numberOfDays; i++) {
+		currentDayOfweek = namesDaysOfWeek[i]
+		numberOfLessons = schedule.week_days[currentDayOfweek].length
 
 		for (let j = 0; j < numberOfLessons; j++) {
-			let lessonInformation = createLessonInformation()
-			lessonInformation.name = removeExtraSpaces(schedule[i][j].disciplName)
-			lessonInformation.type = removeExtraSpaces(schedule[i][j].disciplType)
+			lessonInformation = createLessonInformation()
+			lessonInformation.name = removeExtraSpaces(schedule.week_days[currentDayOfweek][j].discipline.name)
+			lessonInformation.type = removeExtraSpaces(schedule.week_days[currentDayOfweek][j].original_lesson_type)
 
-			let keyWordInSchedule = schedule[i][j].dayDate.trim().toLowerCase()
+			keyWordInSchedule = schedule.week_days[currentDayOfweek][j].original_dates
+			keyWordInSchedule = keyWordInSchedule == null ? "" : keyWordInSchedule.trim().toLowerCase()
 
 			if (Object.keys(splitLessons).includes(keyWordInSchedule)) {
-				splitLessons[keyWordInSchedule][i].push(lessonInformation)
+				splitLessons[keyWordInSchedule][i + forRealNumberOfDay].push(lessonInformation)
 			} else {
-				splitLessons[firstKeyWordForWeek][i].push(lessonInformation)
-				splitLessons[secondKeyWordForWeek][i].push(lessonInformation)
+				splitLessons[firstKeyWordForWeek][i + forRealNumberOfDay].push(lessonInformation)
+				splitLessons[secondKeyWordForWeek][i + forRealNumberOfDay].push(lessonInformation)
 			}
 		}
 	}
-
+	console.log(splitLessons)
 	return splitLessons
 }
 

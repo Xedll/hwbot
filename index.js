@@ -31,7 +31,6 @@ let pool = {}
 let books = {}
 let homeworkWithFiles = {}
 let groupNum = undefined || 4201
-let groupApiID = undefined || 26022
 
 const db = new sqlite3.Database(path.resolve(__dirname, "../db/homework.db"), sqlite3.OPEN_READWRITE, (err) => {
 	if (err) console.error(err)
@@ -350,27 +349,12 @@ setInterval(async () => {
 			}
 		}
 		await getHomeworkFromDB()
-		await axios
-			.post(
-				`https://kai.ru/raspisanie?p_p_id=pubStudentSchedule_WAR_publicStudentSchedule10&p_p_lifecycle=2&p_p_resource_id=getGroupsURL&query=${groupNum}`
-			)
-			.then((data) => (groupApiID = data.data[0].id))
-		await axios
-			.post(
-				"https://kai.ru/raspisanie?p_p_id=pubStudentSchedule_WAR_publicStudentSchedule10&p_p_lifecycle=2&p_p_resource_id=schedule",
-				{ groupId: groupApiID },
-				{
-					headers: {
-						"content-type": "application/x-www-form-urlencoded",
-					},
-				}
-			)
-			.then(async (response) => {
-				fs.writeFileSync(__dirname + "/options/vuzapi.json", JSON.stringify(response.data), { flag: "w+" })
-				fs.writeFileSync(__dirname + "/options/lessons.json", JSON.stringify(getListOfLessons(response.data)), { flag: "w+" })
-			})
+		await axios.get(`https://api.pocket-kai.ru/group/by_name/${groupNum}/schedule/week`).then(async (response) => {
+			fs.writeFileSync(__dirname + "/options/vuzapi.json", JSON.stringify(response.data), { flag: "w+" })
+			fs.writeFileSync(__dirname + "/options/lessons.json", JSON.stringify(getListOfLessons(response.data)), { flag: "w+" })
+		})
 	}
-}, 300_000)
+}, 30_000)
 
 bot.onText(/\/start/, async (message) => {
 	await getUsersFromDB()

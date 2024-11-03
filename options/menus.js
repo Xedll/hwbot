@@ -1,6 +1,5 @@
 const parseLessonsForOptions = require("../commands/parseLessonsForOptions")
 const lessons = require("./lessons.json")
-
 const menus = () => {
 	return {
 		basic: [["Профиль"], ["Посмотреть дз"], ["Разное"]],
