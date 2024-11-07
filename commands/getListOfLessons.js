@@ -5,7 +5,6 @@ function getListOfLessons(schedule) {
 	let currentDayOfweek = ""
 
 	let numberOfDays = 7
-	console.log(schedule)
 	for (let i = 0; i < numberOfDays; i++) {
 		currentDayOfweek = namesDaysOfWeek[i]
 
@@ -25,7 +24,6 @@ function getListOfLessons(schedule) {
 			}
 		}
 	}
-	console.log(lessons)
 	return lessons
 }
 

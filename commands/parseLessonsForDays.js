@@ -42,7 +42,6 @@ function parseLessonsForDays(schedule) {
 			}
 		}
 	}
-	console.log(splitLessons)
 	return splitLessons
 }
 

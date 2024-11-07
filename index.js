@@ -183,14 +183,14 @@ getFileFromDB()
 
 setInterval(async () => {
 	//!!Прок на каждые 5 минут
-	if (new Date().getUTCHours() + 3 == 14 && new Date().getMinutes() + 1 >= 0 && new Date().getMinutes() + 1 <= 5) {
+	if (new Date().getUTCHours() + 3 == 14 && new Date().getMinutes() + 1 >= 0 && new Date().getMinutes() + 1 < 5) {
 		await getUsersFromDB()
 		await getHomeworkFromDB()
-		let homeworkForTomorrow = getHomeworkForTomorrow(homework)
 
-		if (homeworkForTomorrow) {
+		if (getHomeworkForTomorrow(homework)) {
 			for (let chatID of Object.keys(chats)) {
 				try {
+					let homeworkForTomorrow = getHomeworkForTomorrow(homework)
 					if (Object.keys(homeworkForTomorrow).includes("Иностранный язык")) {
 						let tempArray = []
 						for (let item of homeworkForTomorrow["Иностранный язык"]) {
@@ -354,7 +354,7 @@ setInterval(async () => {
 			fs.writeFileSync(__dirname + "/options/lessons.json", JSON.stringify(getListOfLessons(response.data)), { flag: "w+" })
 		})
 	}
-}, 30_000)
+}, 300_000)
 
 bot.onText(/\/start/, async (message) => {
 	await getUsersFromDB()
@@ -1656,7 +1656,7 @@ bot.on("callback_query", async (message) => {
 					}
 					homeworkForTomorrow[lesson] = tempArray
 				}
-				if (Object.keys(homeworkForTomorrow).length == 1 && homeworkForTomorrow[lesson] && lesson == "Иностранный язык") {
+				if (Object.keys(homeworkForTomorrow).length == 1 && homeworkForTomorrow[lesson].length == 0 && lesson == "Иностранный язык") {
 					bot.answerCallbackQuery(message.id)
 					return await bot.sendMessage(chatID, `Дз на завтра отсутствует.`)
 				}
@@ -2132,9 +2132,7 @@ bot.on("callback_query", async (message) => {
 					console.log(`1503 line. ${chatID} Inserting homework`)
 				}
 			)
-			console.log(pool[chatID].tempTask)
 			if (pool[chatID].tempTask.homework_files) {
-				console.log(1807)
 				db.run(
 					"INSERT INTO file(file_type, file_name) VALUES (?,?)",
 					[pool[chatID].tempTask.homework_files.type, pool[chatID].tempTask.homework_files.arr[0]],
