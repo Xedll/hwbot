@@ -1,7 +1,7 @@
 function parseLessonsForDays(schedule) {
 	let splitLessons = []
 
-	let namesDaysOfWeek = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+	let namesDaysOfWeek = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"]
 	let currentDayOfweek = ""
 
 	let numberOfDays = 7
@@ -24,14 +24,14 @@ function parseLessonsForDays(schedule) {
 
 	for (let i = 0; i < numberOfDays; i++) {
 		currentDayOfweek = namesDaysOfWeek[i]
-		numberOfLessons = schedule.week_days[currentDayOfweek].length
+		numberOfLessons = schedule[currentDayOfweek].length
 
 		for (let j = 0; j < numberOfLessons; j++) {
 			lessonInformation = createLessonInformation()
-			lessonInformation.name = removeExtraSpaces(schedule.week_days[currentDayOfweek][j].discipline.name)
-			lessonInformation.type = removeExtraSpaces(schedule.week_days[currentDayOfweek][j].original_lesson_type)
+			lessonInformation.name = removeExtraSpaces(schedule[currentDayOfweek][j].name)
+			lessonInformation.type = removeExtraSpaces(schedule[currentDayOfweek][j].type)
 
-			keyWordInSchedule = schedule.week_days[currentDayOfweek][j].original_dates
+			keyWordInSchedule = schedule[currentDayOfweek][j].date
 			keyWordInSchedule = keyWordInSchedule == null ? "" : keyWordInSchedule.trim().toLowerCase()
 
 			if (Object.keys(splitLessons).includes(keyWordInSchedule)) {
@@ -46,12 +46,12 @@ function parseLessonsForDays(schedule) {
 }
 
 function createLessonInformation() {
-	return { name: "", type: "" }
+	return { type: "", name: "" }
 }
 
 function removeExtraSpaces(line) {
 	if (line != null) return line.match(/(\S+)/g).join(" ")
+
 	return line
 }
-
 module.exports = parseLessonsForDays

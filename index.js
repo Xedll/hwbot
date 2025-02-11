@@ -3,7 +3,6 @@ const sqlite3 = require("sqlite3").verbose()
 const TelegramBot = require("node-telegram-bot-api")
 require("dotenv").config()
 const fs = require("fs")
-const axios = require("axios").default
 const path = require("path")
 
 //Functions
@@ -14,13 +13,14 @@ const getParsedHomework = require(path.resolve(__dirname, "./commands/getParsedH
 const parseLessonsForDays = require(path.resolve(__dirname, "./commands/parseLessonsForDays.js")) //Передаётся "сырая" дата апи вуза
 const getListOfLessons = require(path.resolve(__dirname, "./commands/getListOfLessons.js")) //Передаётся "сырая" дата апи вуза
 const getHomeworkForTomorrow = require(path.resolve(__dirname, "./commands/getHomeworkForTomorrow.js"))
+const parseLessonsFromSite = require(path.resolve(__dirname, "./commands/parseLessonsFromSite.js"))
 
 //Options
 const commands = require(path.resolve(__dirname, "./options/commands.js"))
 const menus = require(path.resolve(__dirname, "./options/menus.js"))
 const lessons = require(path.resolve(__dirname, "./options/lessons.json"))
-const APIData = require(path.resolve(__dirname, "./options/vuzapi.json"))
 const setDeadline = require(path.resolve(__dirname, "./commands/setDeadline.js"))
+const ParsedData = require(path.resolve(__dirname, "./options/Schedule.json"))
 const getEvennessOfWeek = require(path.resolve(__dirname, "./commands/getEvennessOfWeek.js"))
 
 let permission = []
@@ -30,7 +30,6 @@ let files = {}
 let pool = {}
 let books = {}
 let homeworkWithFiles = {}
-let groupNum = undefined || 4201
 
 const db = new sqlite3.Database(path.resolve(__dirname, "../db/homework.db"), sqlite3.OPEN_READWRITE, (err) => {
 	if (err) console.error(err)
@@ -167,6 +166,7 @@ const bot = new TelegramBot(BOT_TOKEN, {
 })
 
 bot.on("polling_error", (err) => {
+	console.error(BOT_TOKEN)
 	console.error(err.message)
 })
 
@@ -183,178 +183,180 @@ getFileFromDB()
 
 setInterval(async () => {
 	//!!Прок на каждые 5 минут
-	if (new Date().getUTCHours() + 3 == 14 && new Date().getMinutes() + 1 >= 0 && new Date().getMinutes() + 1 < 5) {
-		await getUsersFromDB()
-		await getHomeworkFromDB()
+	//if (new Date().getUTCHours() + 3 == 14 && new Date().getMinutes() + 1 >= 0 && new Date().getMinutes() + 1 < 5) {
+	await getUsersFromDB()
+	await getHomeworkFromDB()
 
-		if (getHomeworkForTomorrow(homework)) {
-			for (let chatID of Object.keys(chats)) {
-				try {
-					let homeworkForTomorrow = getHomeworkForTomorrow(homework)
-					if (Object.keys(homeworkForTomorrow).includes("Иностранный язык")) {
-						let tempArray = []
-						for (let item of homeworkForTomorrow["Иностранный язык"]) {
-							if (item.homework_english_group == chats[chatID].student_english) {
-								tempArray.push(item)
+	if (getHomeworkForTomorrow(homework)) {
+		for (let chatID of Object.keys(chats)) {
+			try {
+				let homeworkForTomorrow = getHomeworkForTomorrow(homework)
+				if (Object.keys(homeworkForTomorrow).includes("Иностранный язык")) {
+					let tempArray = []
+					for (let item of homeworkForTomorrow["Иностранный язык"]) {
+						if (item.homework_english_group == chats[chatID].student_english) {
+							tempArray.push(item)
+						}
+					}
+					homeworkForTomorrow["Иностранный язык"] = tempArray
+				}
+
+				if (
+					Object.keys(homeworkForTomorrow).length == 1 &&
+					Object.keys(homeworkForTomorrow)[0] == "Иностранный язык" &&
+					homeworkForTomorrow["Иностранный язык"].length < 1
+				) {
+					continue
+				}
+				await bot.sendMessage(chatID, "#завтра")
+				for (let lesson of Object.keys(homeworkForTomorrow)) {
+					let engFlag = false
+					if (lesson == "Иностранный язык") {
+						for (let item of homeworkForTomorrow[lesson]) {
+							if (item.homework_english_group === chats[chatID].student_english) {
+								engFlag = true
 							}
 						}
-						homeworkForTomorrow["Иностранный язык"] = tempArray
 					}
 
-					if (
-						Object.keys(homeworkForTomorrow).length == 1 &&
-						Object.keys(homeworkForTomorrow)[0] == "Иностранный язык" &&
-						homeworkForTomorrow["Иностранный язык"].length < 1
-					) {
-						continue
-					}
-					await bot.sendMessage(chatID, "#завтра")
-					for (let lesson of Object.keys(homeworkForTomorrow)) {
-						let engFlag = false
-						if (lesson == "Иностранный язык") {
-							for (let item of homeworkForTomorrow[lesson]) {
-								if (item.homework_english_group === chats[chatID].student_english) {
-									engFlag = true
-								}
+					if ((engFlag && lesson == "Иностранный язык") || lesson != "Иностранный язык") {
+						await bot.sendMessage(chatID, `Дз по дисциплине "<u>${lesson}</u>":`, {
+							parse_mode: "HTML",
+						})
+					} else continue
+
+					for (let hw of homeworkForTomorrow[lesson]) {
+						if (
+							!(
+								chats[chatID].student_english == hw.homework_english_group ||
+								hw.homework_english_group == 0 ||
+								chats[chatID].permission_title == "senior"
+							)
+						)
+							continue
+						let hwText = buildHomeworkMessage(hw, chats[chatID])
+
+						let filesForSending = []
+						if (homeworkWithFiles[hw.homework_id]) {
+							for (let fileID of homeworkWithFiles[hw.homework_id]) {
+								if (!files[fileID]) return
+								filesForSending.push(files[fileID])
 							}
 						}
-
-						if ((engFlag && lesson == "Иностранный язык") || lesson != "Иностранный язык") {
-							await bot.sendMessage(chatID, `Дз по дисциплине "<u>${lesson}</u>":`, {
+						if (filesForSending.length == 0) {
+							await bot.sendMessage(chatID, hwText, {
 								parse_mode: "HTML",
 							})
-						} else continue
-
-						for (let hw of homeworkForTomorrow[lesson]) {
-							if (
-								!(
-									chats[chatID].student_english == hw.homework_english_group ||
-									hw.homework_english_group == 0 ||
-									chats[chatID].permission_title == "senior"
-								)
-							)
-								continue
-							let hwText = buildHomeworkMessage(hw, chats[chatID])
-
-							let filesForSending = []
-							if (homeworkWithFiles[hw.homework_id]) {
-								for (let fileID of homeworkWithFiles[hw.homework_id]) {
-									if (!files[fileID]) return
-									filesForSending.push(files[fileID])
+						}
+						if (filesForSending.length == 1) {
+							if (filesForSending[0].file_type == "document") {
+								if (hwText.length <= 1024) {
+									await bot.sendDocument(chatID, filesForSending[0].file_name, {
+										caption: hwText,
+										parse_mode: "HTML",
+									})
+								} else {
+									await bot.sendMessage(chatID, hwText + "\n&#9660; Документ к дз снизу &#9660;", {
+										parse_mode: "HTML",
+									})
+									await bot.sendDocument(chatID, filesForSending[0].file_name)
 								}
 							}
-							if (filesForSending.length == 0) {
-								await bot.sendMessage(chatID, hwText, {
-									parse_mode: "HTML",
-								})
-							}
-							if (filesForSending.length == 1) {
-								if (filesForSending[0].file_type == "document") {
-									if (hwText.length <= 1024) {
-										await bot.sendDocument(chatID, filesForSending[0].file_name, {
-											caption: hwText,
-											parse_mode: "HTML",
-										})
-									} else {
-										await bot.sendMessage(chatID, hwText + "\n&#9660; Документ к дз снизу &#9660;", {
-											parse_mode: "HTML",
-										})
-										await bot.sendDocument(chatID, filesForSending[0].file_name)
-									}
-								}
-								if (filesForSending[0].file_type == "photo") {
-									if (hwText.length <= 1024) {
-										await bot.sendPhoto(chatID, filesForSending[0].file_name, {
-											caption: hwText,
-											parse_mode: "HTML",
-										})
-									} else {
-										await bot.sendMessage(chatID, hwText + "\n&#9660; Фото к дз снизу &#9660;", {
-											parse_mode: "HTML",
-										})
-										await bot.sendPhoto(chatID, filesForSending[0].file_name)
-									}
-								}
-							}
-							if (filesForSending.length > 1) {
-								let photos = []
-								let docs = []
-								let flag = false
-								for (let item of filesForSending) {
-									if (item.file_type == "document")
-										docs.push({
-											type: "document",
-											media: item.file_name,
-										})
-									if (item.file_type == "photo")
-										photos.push({
-											type: "photo",
-											media: item.file_name,
-										})
-								}
-								if (photos.length > 0) {
-									if (hwText.length <= 990) {
-										photos[0].caption = "\n&#9660; Файлы к дз снизу &#9660;\n" + hwText
-										photos[0].parse_mode = "HTML"
-										await bot.sendMediaGroup(chatID, photos)
-										flag = true
-									} else {
-										await bot.sendMessage(chatID, hwText, {
-											parse_mode: "HTML",
-										})
-										await bot.sendMediaGroup(chatID, photos)
-									}
-								}
-								if (docs.length > 0) {
-									if (!flag && hwText.length <= 990) {
-										docs[0].caption = hwText
-										docs[0].parse_mode = "HTML"
-										await bot.sendMediaGroup(chatID, docs)
-									} else if (flag) {
-										docs[0].caption = "&#9650; Файлы к дз, что выше &#9650;"
-										docs[0].parse_mode = "HTML"
-										await bot.sendMediaGroup(chatID, docs)
-									}
+							if (filesForSending[0].file_type == "photo") {
+								if (hwText.length <= 1024) {
+									await bot.sendPhoto(chatID, filesForSending[0].file_name, {
+										caption: hwText,
+										parse_mode: "HTML",
+									})
+								} else {
+									await bot.sendMessage(chatID, hwText + "\n&#9660; Фото к дз снизу &#9660;", {
+										parse_mode: "HTML",
+									})
+									await bot.sendPhoto(chatID, filesForSending[0].file_name)
 								}
 							}
 						}
-					}
-				} catch (err) {
-					if (err.response.body.description == "Bad Request: chat not found") {
-						await db.run("DELETE FROM student WHERE student_id=? ", [chatID], (err) => {
-							if (err) {
-								console.log("275 line")
-								return console.error(err)
+						if (filesForSending.length > 1) {
+							let photos = []
+							let docs = []
+							let flag = false
+							for (let item of filesForSending) {
+								if (item.file_type == "document")
+									docs.push({
+										type: "document",
+										media: item.file_name,
+									})
+								if (item.file_type == "photo")
+									photos.push({
+										type: "photo",
+										media: item.file_name,
+									})
 							}
-							console.log("278 line, Deleting student bc err")
-						})
+							if (photos.length > 0) {
+								if (hwText.length <= 990) {
+									photos[0].caption = "\n&#9660; Файлы к дз снизу &#9660;\n" + hwText
+									photos[0].parse_mode = "HTML"
+									await bot.sendMediaGroup(chatID, photos)
+									flag = true
+								} else {
+									await bot.sendMessage(chatID, hwText, {
+										parse_mode: "HTML",
+									})
+									await bot.sendMediaGroup(chatID, photos)
+								}
+							}
+							if (docs.length > 0) {
+								if (!flag && hwText.length <= 990) {
+									docs[0].caption = hwText
+									docs[0].parse_mode = "HTML"
+									await bot.sendMediaGroup(chatID, docs)
+								} else if (flag) {
+									docs[0].caption = "&#9650; Файлы к дз, что выше &#9650;"
+									docs[0].parse_mode = "HTML"
+									await bot.sendMediaGroup(chatID, docs)
+								}
+							}
+						}
 					}
 				}
-			}
-		}
-
-		let overdueHomework = getHomeworkArray(homework, 30, { mode: "overdue" })
-
-		if (overdueHomework) {
-			for (let overdueLesson of Object.keys(overdueHomework)) {
-				for (let overdueTask of overdueHomework[overdueLesson]) {
-					await db.run("DELETE FROM homework WHERE homework_id=? ", [overdueTask.homework_id], (err) => {
+			} catch (err) {
+				if (err.response.body.description == "Bad Request: chat not found") {
+					await db.run("DELETE FROM student WHERE student_id=? ", [chatID], (err) => {
 						if (err) {
-							console.log("292 line")
+							console.log("275 line")
 							return console.error(err)
 						}
-						console.log("295 line, Deleting homework bc overdue")
+						console.log("278 line, Deleting student bc err")
 					})
 				}
 			}
 		}
-		await getHomeworkFromDB()
-		await axios.get(`https://api.pocket-kai.ru/group/by_name/${groupNum}/schedule/week`).then(async (response) => {
-			fs.writeFileSync(__dirname + "/options/vuzapi.json", JSON.stringify(response.data), { flag: "w+" })
-			fs.writeFileSync(__dirname + "/options/lessons.json", JSON.stringify(getListOfLessons(response.data)), { flag: "w+" })
-		})
 	}
-}, 300_000)
+
+	let overdueHomework = getHomeworkArray(homework, 30, { mode: "overdue" })
+
+	if (overdueHomework) {
+		for (let overdueLesson of Object.keys(overdueHomework)) {
+			for (let overdueTask of overdueHomework[overdueLesson]) {
+				await db.run("DELETE FROM homework WHERE homework_id=? ", [overdueTask.homework_id], (err) => {
+					if (err) {
+						console.log("292 line")
+						return console.error(err)
+					}
+					console.log("295 line, Deleting homework bc overdue")
+				})
+			}
+		}
+	}
+	await getHomeworkFromDB()
+	try {
+		await parseLessonsFromSite()
+		fs.writeFileSync(__dirname + "/options/lessons.json", JSON.stringify(getListOfLessons(ParsedData)), { flag: "w+" })
+	} catch (error) {
+		console.error(error)
+	}
+	//}
+}, 25_000)
 
 bot.onText(/\/start/, async (message) => {
 	await getUsersFromDB()
@@ -2113,7 +2115,7 @@ bot.on("callback_query", async (message) => {
 			pool[chatID].tempTask.homework_english_group = pool[chatID].tempTask.homework_lesson == "Иностранный язык" ? chats[chatID].student_english : 0
 			pool[chatID].tempTask.homework_creator = chatID
 			pool[chatID].tempTask.homework_deadline = 0
-			setDeadline(parseLessonsForDays(APIData), pool[chatID].tempTask, getEvennessOfWeek())
+			setDeadline(parseLessonsForDays(ParsedData), pool[chatID].tempTask, getEvennessOfWeek())
 			await db.run(
 				"INSERT INTO homework(homework_text,homework_lesson,homework_deadline,homework_creator,homework_type,homework_english_group) VALUES (?,?,?,?,?,?)",
 				[
